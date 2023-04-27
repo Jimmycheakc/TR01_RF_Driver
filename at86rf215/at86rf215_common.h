@@ -13,7 +13,7 @@ extern "C" {
 #include <stdio.h>
 #include <pthread.h>
 #include "../io_utils/io_utils.h"
-#include "../spi/tr01_spi.h"
+#include "../i2c/i2c.h"
 #include "at86rf215_regs.h"
 
 
@@ -133,24 +133,19 @@ typedef struct
 
 typedef struct
 {
-    // reset pin
-    char *reset_chip;
-    int reset_pin;
-    char *reset_consumer;
-
     // interrupt pin
     pthread_t irq_tid;
     char *irq_chip;
 	int irq_pin;
-    int *irq_consumer;
-    int cs_pin;
+    char *irq_consumer;
+    gpio_interrupt_t *irq_data;
 
-    // spi device
-    int spi_dev;
-    int spi_channel;
+    // i2c device
+    int fd;
+    uint8_t slave_addr;
+    spi_slave_select slave_select;
 
     // internal controls
-    spi_t* spi;
     int initialized;
     at86rf215_cal_results_st cal;
     bool override_cal;

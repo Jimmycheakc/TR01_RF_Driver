@@ -184,7 +184,7 @@ int i2c_write_multiple_bytes(int fd, uint8_t addr, uint8_t reg_addr, uint8_t *bu
 {
     struct i2c_msg msg;
     struct i2c_rdwr_ioctl_data data;
-    uint8_t data_buf[2];
+    uint8_t data_buf[len + 1];
     int ret;
 
     data_buf[0] = reg_addr;
@@ -205,4 +205,84 @@ int i2c_write_multiple_bytes(int fd, uint8_t addr, uint8_t reg_addr, uint8_t *bu
     }
 
     return ret;
+}
+
+/**
+ *  A detailed description of the i2c_write_to_buffer function
+ *
+ *  This function is to write the register value to i2c slave device's register
+ *
+ *  @param fd - file descriptor
+ *  @param addr - i2c slave address
+ *  @param reg_addr - i2c slave register address
+ *  @param new_reg_value - register value
+ *  @param \*buf - data buffer to write
+ *  @param len - number of bytes to write
+ *  @return - number of bytes written on success, else return -1 on error
+ */
+int i2c_write_to_buffer(int fd, uint8_t addr, uint8_t reg_addr, uint8_t *buf, uint8_t len)
+{
+    struct i2c_msg msg;
+    struct i2c_rdwr_ioctl_data data;
+    uint8_t data_buf[len + 1];
+    int ret;
+
+    data_buf[0] = reg_addr;
+    memcpy(&data_buf[1], buf, len);
+
+    msg.addr = (__u16)addr;
+    msg.flags = 0;
+    msg.len = len + 1;
+    msg.buf = data_buf;
+
+    data.msgs = &msg;
+    data.nmsgs = 1;
+
+    ret = ioctl(fd, I2C_RDWR, &data);
+    if (ret < 0)
+    {
+        printf("Error: unable to write data\n");
+    }
+
+    return ret;
+}
+
+/**
+ *  A detailed description of the i2c_read function
+ *
+ *  This function is to read the register value from i2c slave device
+ *
+ *  @param fd - file descriptor
+ *  @param addr - i2c slave address
+ *  @param \*buf - buffer to read
+ *  @param len - number of bytes to read
+ *  @return - number of read bytes on success, else return -1 on error
+ */
+uint8_t i2c_read_from_buffer(int fd, uint8_t addr, uint8_t *buf, uint8_t len)
+{
+    struct i2c_msg msg[2];
+    struct i2c_rdwr_ioctl_data data;
+    int ret;
+
+    msg[0].addr = (__u16)addr;
+    msg[0].flags = 0;
+    msg[0].len = 1;
+    msg[0].buf = NULL;
+
+    msg[1].addr = (__u16)addr;
+    msg[1].flags = I2C_M_RD;
+    msg[1].len = len;
+    msg[1].buf = buf;
+
+    data.msgs = msg;
+    data.nmsgs = 2;
+
+    ret = ioctl(fd, I2C_RDWR, &data);
+    if (ret < 0)
+    {
+        printf("ERROR: unable to read data\n");
+        return ret;
+    }
+
+    return len;
 }

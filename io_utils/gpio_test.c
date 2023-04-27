@@ -113,7 +113,7 @@ void gpio_irq_monitor_test(const char *device, int offset)
     printf("1. %s: Monitoring interrupt pin\n", __func__);
 
     pthread_t pthread;
-    ret = io_utils_setup_interrupt(pthread, device, GPIOD_CTXLESS_EVENT_FALLING_EDGE,
+    ret = io_utils_setup_interrupt(device, GPIOD_CTXLESS_EVENT_FALLING_EDGE,
                                     offset, false,
                                     "gpio_interrupt",
                                     &interrupt_handler,

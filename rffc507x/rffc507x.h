@@ -31,7 +31,7 @@ extern "C" {
 #include <stdio.h>
 #include <stdint.h>
 #include "../io_utils/io_utils.h"
-#include "../tr01_spi.h"
+#include "../i2c/i2c.h"
 
 
 /* 31 registers, each containing 16 bits of data. */
@@ -59,12 +59,11 @@ typedef struct  // readsel = 0001
 
 typedef struct
 {
-    char *reset_chip;
-    int reset_pin;
-    char *reset_consumer;
-    double ref_freq_hz;
+    int fd;
+    uint8_t slave_addr;
+    spi_slave_select slave_select;
 
-    spi_t* spi;
+    double ref_freq_hz;
 
     int initialized;
     uint16_t rffc507x_regs[RFFC507X_NUM_REGS];
@@ -72,8 +71,7 @@ typedef struct
 } rffc507x_st;
 
 // Initialize chip
-int rffc507x_init(  rffc507x_st* dev,
-					spi_t* spi);
+int rffc507x_init(rffc507x_st* dev, const char *device_name, uint8_t addr, spi_slave_select slave_select);
 int rffc507x_release(rffc507x_st* dev);
 
 // Read a register via SPI. Save a copy to memory and return
@@ -92,7 +90,6 @@ int rffc507x_regs_commit(rffc507x_st* dev);
 // Set frequency (MHz)
 double rffc507x_set_frequency(rffc507x_st* dev, double lo_hz);
 
-void rffc507x_reset(rffc507x_st* dev);
 void rffc507x_enable(rffc507x_st* dev);
 void rffc507x_disable(rffc507x_st* dev);
 void rffc507x_set_gpo(rffc507x_st* dev, uint8_t gpo);

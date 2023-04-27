@@ -2,7 +2,7 @@
 #include "at86rf215.h"
 #include "at86rf215_radio.h"
 #include "../io_utils/io_utils.h"
-#include "../spi/tr01_spi.h"
+#include "../i2c/i2c.h"
 
 
 #define IMX_SPI_DEV 1
@@ -12,22 +12,7 @@
 #define IMX_MODEM_IRQ 8
 
 
-static spi_t spi;
-
-#define SPI_DEVICE "/dev/spidev1.0"
-
-at86rf215_st dev =
-{
-    .reset_pin = IMX_MODEM_RESET,
-    .irq_chip = "gpiochip5",
-    .irq_consumer = "gpio_interrupt",
-	.irq_pin = IMX_MODEM_IRQ,
-    .cs_pin = IMX_MODEM_SS,
-    .spi_dev = IMX_SPI_DEV,
-    .spi_channel = IMX_MODEM_SPI_CHANNEL,
-};
-
-
+#define I2C_DEVICE "/dev/i2c-3"
 
 uint16_t unknown_regs[] = { 0x0015, 
                             0x0115, 0x0117, 0x0118, 0x0119, 0x011A, 0x011B, 0x011C, 0x011D, 0x011E, 0x011F, 0x0120, 0x0123, 0x0124, 0x0129,
@@ -148,7 +133,7 @@ int test_at86rf215_continues_iq_rx (at86rf215_st* dev, at86rf215_rf_channel_en r
                                             at86rf215_iq_clock_data_skew_4_906ns;
 
     at86rf215_setup_iq_radio_receive (dev, radio, freq_hz, 0, skew);
-    printf("Started I/Q RX session for Radio %d, Freq: %llu Hz, timeout: %d usec (0=infinity)\n",
+    printf("Started I/Q RX session for Radio %d, Freq: %lu Hz, timeout: %d usec (0=infinity)\n",
         radio, freq_hz, usec_timeout);
 
 
@@ -209,17 +194,14 @@ int test_at86rf215_continues_iq_loopback (at86rf215_st* dev, at86rf215_rf_channe
 // -----------------------------------------------------------------------------------------
 int main ()
 {
+    at86rf215_st dev = {0};
     at86rf215_iq_interface_config_st cfg = {0};
     at86rf215_irq_st irq = {0};
 
     // Init GPIOs on reset
 	//io_utils_setup("gpiochip0");
 
-    // Init spi
-    spi_init(&spi, SPI_DEVICE, 0, 0, 2500000);
-
-    //at86rf215_reset(&dev);
-	at86rf215_init(&dev, &spi);
+	at86rf215_init(&dev, I2C_DEVICE, I2C_TO_SPI_SLAVE_ADDRESS, at86rf215_1_ss, "gpiochip5", IMX_MODEM_IRQ, "gpio_interrupt");
 
     // TEST: read the p/n and v/n from the IC
     #if TEST_VERSIONS
@@ -252,8 +234,6 @@ int main ()
     getchar();
 
 	at86rf215_close(&dev);
-	spi_free(&spi);
-    //io_utils_cleanup();
 
     return 0;
 }

@@ -7,12 +7,12 @@ extern "C" {
 
 #include "at86rf215_common.h"
 #include "at86rf215_radio.h"
+#include "../i2c/i2c.h"
 
 
-int at86rf215_init(at86rf215_st* dev,
-					spi_t* spi);
+int at86rf215_init(at86rf215_st* dev, const char *device_name, uint8_t addr, spi_slave_select slave_select,
+                    char *irq_chip, int irq_pin, char *irq_consumer);
 int at86rf215_close(at86rf215_st* dev);
-void at86rf215_reset(at86rf215_st* dev);
 
 void at86rf215_get_versions(at86rf215_st* dev, uint8_t *pn, uint8_t *vn);
 int at86rf215_print_version(at86rf215_st* dev);

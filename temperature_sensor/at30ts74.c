@@ -110,9 +110,15 @@ uint16_t at30ts74_get_shoutdown(at30ts74_t *self)
     return (val && AT30TS74_REG_CONFIG_SD_MASK);
 }
 
-void at30ts74_init(at30ts74_t *self, const char *device_name, uint8_t addr)
+int at30ts74_init(at30ts74_t *self, const char *device_name, uint8_t addr)
 {
-    self->fd = i2c_open(device_name);
+    int fd = i2c_open(device_name);
+    if (fd < 0)
+    {
+        printf("unable to open i2c-dev\n");
+        return -1;
+    }
+    self->fd = fd;
     self->dev_name = device_name;
     self->slave_addr = addr;
 }

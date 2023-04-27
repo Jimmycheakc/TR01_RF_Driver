@@ -14,19 +14,6 @@
 #include "io_utils.h"
 #include "../at86rf215/at86rf215_common.h"
 
-
-typedef struct {
-   const char device[64];
-   int event_type;
-   unsigned int pin;
-   bool active_low;
-   const char consumer[64];
-   gpiod_ctxless_event_handle_cb event_cb;
-   void *data;
-   int flags;
-} gpio_interrupt_t;
-
-
 #define CHIP_NAME    "gpiochip5"
 #define IO_UTILS_SHORT_WAIT(N)   {for (int i=0; i<(N); i++) { asm volatile("nop"); }}
 
@@ -149,7 +136,6 @@ void *gpio_interrupt_thread(void *data)
  *  This function is to setup the interrupt and create a thread to handle interrupt.
  *  The interrupt will use for monitoring the gpio interrupt and perform a callback function.
  *
- *  @param pthread - thread id 
  *  @param \*device - input the gpio chip name "gpiochip*"
  *  @param event_type - rising, falling or both edge event, can refer to event types in gpiod.h
  *  @param pin - pin offset
@@ -160,34 +146,37 @@ void *gpio_interrupt_thread(void *data)
  *  @param flags - refer to enum of GPIO flags on gpiod.h
  *  @return - 0 on success, else return error number on error
  */
-int io_utils_setup_interrupt(pthread_t pthread, const char *device, int event_type,
+int io_utils_setup_interrupt(const char *device, int event_type,
                              unsigned int pin, bool active_low,
                              const char *consumer,
                              gpiod_ctxless_event_handle_cb event_cb,
                              void *data, int flags)
 {
    int ret;
-   gpio_interrupt_t *irq_data = malloc(sizeof(gpio_interrupt_t));
-   if (irq_data == NULL)
+   at86rf215_st* dev = (at86rf215_st*)data;
+   dev->irq_data = malloc(sizeof(gpio_interrupt_t));
+   if (dev->irq_data == NULL)
    {
       printf("Failed to allocate memory for irq data \n");
       return -1;
    }
 
-   strcpy(irq_data->device, device);
-   irq_data->event_type = event_type;
-   irq_data->pin = pin;
-   irq_data->active_low = active_low;
-   strcpy(irq_data->consumer, consumer);
-   irq_data->event_cb = event_cb;
-   irq_data->data = data;
-   irq_data->flags = flags;
+   strncpy(dev->irq_data->device, device, (sizeof(dev->irq_data->device) - 1));
+   dev->irq_data->device[sizeof(dev->irq_data->device) - 1] = '\0';
+   dev->irq_data->event_type = event_type;
+   dev->irq_data->pin = pin;
+   dev->irq_data->active_low = active_low;
+   strncpy(dev->irq_data->consumer, consumer, (sizeof(dev->irq_data->consumer) - 1));
+   dev->irq_data->consumer[sizeof(dev->irq_data->consumer) - 1] = '\0';
+   dev->irq_data->event_cb = event_cb;
+   dev->irq_data->data = data;
+   dev->irq_data->flags = flags;
 
-   ret = pthread_create(&pthread, NULL, gpio_interrupt_thread, (void *)irq_data);
+   ret = pthread_create(&(dev->irq_tid), NULL, gpio_interrupt_thread, (void *)dev->irq_data);
    if (ret < 0)
    {
       printf("Failed to create a thread.\n");
-      free(irq_data);
+      free(dev->irq_data);
    }
 
    return ret;
@@ -201,8 +190,9 @@ int io_utils_setup_interrupt(pthread_t pthread, const char *device, int event_ty
  *  @param pthread - thread id
  *  @return - none
  */
-void io_utils_destroy_interrupt(pthread_t pthread)
+void io_utils_destroy_interrupt(pthread_t pthread, gpio_interrupt_t *irq_data)
 {
-   pthread_join(pthread, NULL);
    pthread_cancel(pthread);
+   free(irq_data);
+   pthread_join(pthread, NULL);
 }

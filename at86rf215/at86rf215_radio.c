@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include "../io_utils/io_utils.h"
-#include "../spi/tr01_spi.h"
 #include "at86rf215_radio.h"
 #include "at86rf215_regs.h"
 

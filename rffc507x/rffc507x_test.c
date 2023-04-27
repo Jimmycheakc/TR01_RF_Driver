@@ -1,25 +1,19 @@
 #include <stdio.h>
 #include "rffc507x.h"
 #include "../io_utils/io_utils.h"
-#include "../tr01_spi.h"
+#include "../i2c/i2c.h"
 
-#define SPI_DEVICE "/dev/spidev1.0"
-
-static spi_t spi;
+#define I2C_DEVICE "/dev/i2c-0"
+#define I2C_SLAVE_ADDRESS 0x20
 
 rffc507x_st dev =
 {
-    .reset_chip = "gpiochip0",
-    .reset_pin = 8,
-    .reset_consumer = "rffc507x_reset",
 	.ref_freq_hz = 32e6,
 };
 
 int main ()
 {
-    spi_init(&spi, SPI_DEVICE, 0, 0, 5000000);
-
-    rffc507x_init(&dev, &spi);
+    rffc507x_init(&dev, I2C_DEVICE, I2C_SLAVE_ADDRESS, rffc507x_1_ss);
 
     printf("RFFC507X Registers:\n");
 	for (int i = 0; i < RFFC507X_NUM_REGS; i ++)
@@ -94,8 +88,6 @@ int main ()
 	}
 
 	rffc507x_release(&dev);
-
-    spi_free(&spi);
 
     return 0;
 }

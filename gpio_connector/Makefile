@@ -1,7 +1,7 @@
-DEPS = io_utils.h
-SRC_FILES = io_utils.c gpio_test.c
+DEPS = ../io_utils/io_utils.h
+SRC_FILES = gpio_connector_test.c gpio_connector.c ../io_utils/io_utils.c
 OBJ_FILES = $(SRC_FILES:.c=.o)
-EXECUTABLE = gpio_test
+EXECUTABLE = gpio_connector_test
 
 all: $(EXECUTABLE)
 

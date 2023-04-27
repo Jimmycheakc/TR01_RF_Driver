@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include "at86rf215.h"
 #include "../io_utils/io_utils.h"
-#include "../spi/tr01_spi.h"
 #include "at86rf215_radio.h"
 #include "at86rf215_regs.h"
 
@@ -14,29 +13,44 @@ int at86rf215_write_buffer(at86rf215_st* dev, uint16_t addr, uint8_t *buffer, ui
 {
     // a maximal possible chunk size - 256 + 2(addr)
     uint8_t chunk_tx[258] = {0};
-    uint8_t chunk_rx[258] = {0};
+
     chunk_tx[0] = ((addr >> 8) & 0x3F) | 0x80;
     chunk_tx[1] = addr & 0xFF;
     memcpy(chunk_tx + 2, buffer, size);
 
-    return spi_write(dev->spi, chunk_tx, size + 2);
+    return i2c_write_to_buffer(dev->fd, I2C_TO_SPI_SLAVE_WRITE_ADDRESS, dev->slave_select, chunk_tx, size + 2);
 }
 
 //===================================================================
 int at86rf215_read_buffer(at86rf215_st* dev, uint16_t addr, uint8_t *buffer, uint8_t size)
 {
+    int ret;
     // a maximal possible chunk size - 256 + 2(addr)
     uint8_t chunk_tx[258] = {0};
     uint8_t chunk_rx[258] = {0};
     chunk_tx[0] = (addr >> 8) & 0x3F;
     chunk_tx[1] = addr & 0xFF;
 
-    int ret = spi_exchange(dev->spi, chunk_rx, chunk_tx, size + 2);
+    ret = i2c_write_to_buffer(dev->fd, I2C_TO_SPI_SLAVE_WRITE_ADDRESS, dev->slave_select, chunk_tx, 2);
+    if (ret < 0)
+    {
+        printf("Failed to write to buffer.\n");
+        return -1;
+    }
 
+    // Need to implement polling method to check status
+
+    ret = i2c_read_from_buffer(dev->fd, I2C_TO_SPI_SLAVE_READ_ADDRESS, chunk_rx, size);
     if (ret >= 0)
     {
-        memcpy(buffer, chunk_rx + 2, size);
+        memcpy(buffer, chunk_rx, size);
     }
+    else
+    {
+        printf("Failed to read from buffer.\n");
+        return -1;
+    }
+
     return ret;
 }
 
@@ -44,39 +58,40 @@ int at86rf215_read_buffer(at86rf215_st* dev, uint16_t addr, uint8_t *buffer, uin
 int at86rf215_write_byte(at86rf215_st* dev, uint16_t addr, uint8_t val )
 {
     uint8_t chunk_tx[3] = {0};
-    uint8_t chunk_rx[3] = {0};
+
     chunk_tx[0] = ((addr >> 8) & 0x3F) | 0x80;
     chunk_tx[1] = addr & 0xFF;
     chunk_tx[2] = val;
-    return spi_write(dev->spi, chunk_tx, 3);
+    return i2c_write_to_buffer(dev->fd, I2C_TO_SPI_SLAVE_WRITE_ADDRESS, dev->slave_select, chunk_tx, 3);
 }
 
 //===================================================================
 int at86rf215_read_byte(at86rf215_st* dev, uint16_t addr)
 {
+    int ret;
     uint8_t chunk_tx[3] = {0};
     uint8_t chunk_rx[3] = {0};
     
     chunk_tx[0] = (addr >> 8) & 0x3F;
     chunk_tx[1] = addr & 0xFF;
     
-    /*printf("TX: ");
-    for (int i = 0; i < 3; i ++)
-        printf(" 0x%02X ", chunk_tx[i]);
-    printf("\n");*/
-    
-    int ret = spi_exchange(dev->spi, chunk_rx, chunk_tx, 3);
+    ret = i2c_write_to_buffer(dev->fd, I2C_TO_SPI_SLAVE_WRITE_ADDRESS, dev->slave_select, chunk_tx, 2);
     if (ret < 0)
     {
-        return ret;
+        printf("Failed to write to buffer.\n");
+        return -1;
+    }
+
+    // Need to implement polling method to check status
+
+    ret = i2c_read_from_buffer(dev->fd, I2C_TO_SPI_SLAVE_READ_ADDRESS, chunk_rx, 1);
+    if (ret < 0)
+    {
+        printf("Failed to read from buffer.\n");
+        return -1;
     }
     
-    /*printf("RX: ");
-    for (int i = 0; i < 3; i ++)
-        printf(" 0x%02X ", chunk_rx[i]);
-    printf("\n");*/
-    
-    return chunk_rx[2];
+    return chunk_rx[0];
 }
 
 //===================================================================
@@ -136,16 +151,28 @@ int at86rf215_calibrate_device(at86rf215_st* dev, at86rf215_rf_channel_en ch, in
 }
 
 //===================================================================
-int at86rf215_init(at86rf215_st* dev,
-					spi_t* spi)
+int at86rf215_init(at86rf215_st* dev, const char *device_name, uint8_t addr, spi_slave_select slave_select,
+                    char *irq_chip, int irq_pin, char *irq_consumer)
 {
-	if (dev == NULL)
-	{
-        printf("dev is NULL\n");
-		return -1;
-	}
+	int fd = i2c_open(device_name);
+    if (fd < 0)
+    {
+        printf("unable to open i2c-dev\n");
+        return -1;
+    }
 
-	dev->spi = spi;
+    if (slave_select < at86rf215_1_ss || slave_select > at86rf215_4_ss)
+    {
+        printf("Slave select must be within its range.\n");
+        return -1;
+    }
+
+    dev->fd = fd;
+    dev->slave_addr = addr;
+    dev->slave_select = slave_select;
+    dev->irq_chip = irq_chip;
+    dev->irq_pin = irq_pin;
+    dev->irq_consumer = irq_consumer;
 
     printf("configuring reset and irq pins\n");
 	// Configure GPIO pins
@@ -160,10 +187,10 @@ int at86rf215_init(at86rf215_st* dev,
     at86rf215_get_irqs(dev, &irq, 0);
 
 	dev->num_interrupts = 0;
-    int ret = io_utils_setup_interrupt(dev->irq_tid, dev->irq_chip, GPIOD_CTXLESS_EVENT_RISING_EDGE,
+    int ret = io_utils_setup_interrupt(dev->irq_chip, GPIOD_CTXLESS_EVENT_RISING_EDGE,
                                         dev->irq_pin, false, 
                                         dev->irq_consumer, 
-                                        at86rf215_interrupt_handler,
+                                        (gpiod_ctxless_event_handle_cb)at86rf215_interrupt_handler,
                                         dev,
                                         GPIOD_CTXLESS_FLAG_BIAS_PULL_UP
                                     );
@@ -227,18 +254,13 @@ int at86rf215_close(at86rf215_st* dev)
 	//io_utils_setup_gpio(dev->reset_pin, io_utils_dir_input, io_utils_pull_up);
 	//io_utils_setup_gpio(dev->irq_pin, io_utils_dir_input, io_utils_pull_up);
 
+    io_utils_destroy_interrupt(dev->irq_tid, dev->irq_data);
+    i2c_close(dev->fd);
+    dev->slave_addr = 0;
+    dev->slave_select = unknow_ss;
+
 	printf("device release completed\n");
     return 0;
-}
-
-//===================================================================
-void at86rf215_reset(at86rf215_st* dev)
-{
-    io_utils_write_gpio(dev->reset_chip, dev->reset_pin, 0, false, dev->reset_consumer, GPIOD_CTXLESS_FLAG_BIAS_PULL_DOWN);
-	//io_utils_write_gpio(dev->reset_pin, 0);
-    io_utils_usleep(300);
-	//io_utils_write_gpio(dev->reset_pin, 1);
-    io_utils_write_gpio(dev->reset_chip, dev->reset_pin, 1, false, dev->reset_consumer, GPIOD_CTXLESS_FLAG_BIAS_PULL_DOWN);
 }
 
 //===================================================================

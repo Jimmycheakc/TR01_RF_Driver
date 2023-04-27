@@ -99,7 +99,7 @@ typedef struct {
     uint8_t slave_addr;
 } at30ts74_t;
 
-void at30ts74_init(at30ts74_t *self, const char *device_name, uint8_t addr);
+int at30ts74_init(at30ts74_t *self, const char *device_name, uint8_t addr);
 void at30ts74_close(at30ts74_t *self);
 void at30ts74_set_oneshot(at30ts74_t *self, atOneShot_t oneshot);
 uint16_t at30ts74_get_oneshot(at30ts74_t *self);
