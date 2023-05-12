@@ -167,7 +167,7 @@ int spi_write(spi_t *self, const uint8_t *tx_buf, size_t len)
     int retv;
 
     self->xfer.tx_buf = (unsigned long) tx_buf;
-    //self->xfer.rx_buf = (unsigned long) 0;
+    self->xfer.rx_buf = (unsigned long) 0;
     self->xfer.len = len;
     self->xfer.delay_usecs = 0;
     self->xfer.speed_hz = self->speed;

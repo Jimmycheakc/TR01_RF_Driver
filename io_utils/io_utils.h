@@ -40,6 +40,11 @@ int io_utils_setup_interrupt(const char *device, int event_type,
                              const char *consumer,
                              gpiod_ctxless_event_handle_cb event_cb,
                              void *data, int flags);
+int io_utils_setup_interrupt_bb(const char *device, int event_type,
+                              unsigned int pin, bool active_low,
+                              const char *consumer,
+                              gpiod_ctxless_event_handle_cb event_cb,
+                              void *data, int flags);
 void io_utils_destroy_interrupt(pthread_t pthread, gpio_interrupt_t *irq_data);
 
 #ifdef __cplusplus

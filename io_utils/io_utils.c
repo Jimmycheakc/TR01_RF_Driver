@@ -13,6 +13,7 @@
 #include <string.h>
 #include "io_utils.h"
 #include "../at86rf215/at86rf215_common.h"
+#include "../at86rf215_bb/at86rf215_bb.h"
 
 #define CHIP_NAME    "gpiochip5"
 #define IO_UTILS_SHORT_WAIT(N)   {for (int i=0; i<(N); i++) { asm volatile("nop"); }}
@@ -154,6 +155,42 @@ int io_utils_setup_interrupt(const char *device, int event_type,
 {
    int ret;
    at86rf215_st* dev = (at86rf215_st*)data;
+   dev->irq_data = malloc(sizeof(gpio_interrupt_t));
+   if (dev->irq_data == NULL)
+   {
+      printf("Failed to allocate memory for irq data \n");
+      return -1;
+   }
+
+   strncpy(dev->irq_data->device, device, (sizeof(dev->irq_data->device) - 1));
+   dev->irq_data->device[sizeof(dev->irq_data->device) - 1] = '\0';
+   dev->irq_data->event_type = event_type;
+   dev->irq_data->pin = pin;
+   dev->irq_data->active_low = active_low;
+   strncpy(dev->irq_data->consumer, consumer, (sizeof(dev->irq_data->consumer) - 1));
+   dev->irq_data->consumer[sizeof(dev->irq_data->consumer) - 1] = '\0';
+   dev->irq_data->event_cb = event_cb;
+   dev->irq_data->data = data;
+   dev->irq_data->flags = flags;
+
+   ret = pthread_create(&(dev->irq_tid), NULL, gpio_interrupt_thread, (void *)dev->irq_data);
+   if (ret < 0)
+   {
+      printf("Failed to create a thread.\n");
+      free(dev->irq_data);
+   }
+
+   return ret;
+}
+
+int io_utils_setup_interrupt_bb(const char *device, int event_type,
+                              unsigned int pin, bool active_low,
+                              const char *consumer,
+                              gpiod_ctxless_event_handle_cb event_cb,
+                              void *data, int flags)
+{
+   int ret;
+   struct at86rf215* dev = (struct at86rf215*)data;
    dev->irq_data = malloc(sizeof(gpio_interrupt_t));
    if (dev->irq_data == NULL)
    {

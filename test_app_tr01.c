@@ -462,7 +462,7 @@ static int check_rfic_idle_state()
         rfic3_900mhz_state != at86rf215_radio_state_cmd_trx_off &&
         rfic3_2400mhz_state != at86rf215_radio_state_cmd_trx_off &&
         rfic4_900mhz_state != at86rf215_radio_state_cmd_trx_off &&
-        rfic4_2400mhz_state != at86rf215_radio_state_cmd_trx_off &&
+        rfic4_2400mhz_state != at86rf215_radio_state_cmd_trx_off
         )
     {
         ret = -1;
@@ -589,7 +589,7 @@ static int check_rfic_tx_state()
         rfic3_900mhz_state != at86rf215_radio_state_cmd_tx &&
         rfic3_2400mhz_state != at86rf215_radio_state_cmd_tx &&
         rfic4_900mhz_state != at86rf215_radio_state_cmd_tx &&
-        rfic4_2400mhz_state != at86rf215_radio_state_cmd_tx &&
+        rfic4_2400mhz_state != at86rf215_radio_state_cmd_tx
         )
     {
         ret = -1;
@@ -721,7 +721,7 @@ static int check_rfic_rx_state()
         rfic3_900mhz_state != at86rf215_radio_state_cmd_rx &&
         rfic3_2400mhz_state != at86rf215_radio_state_cmd_rx &&
         rfic4_900mhz_state != at86rf215_radio_state_cmd_rx &&
-        rfic4_2400mhz_state != at86rf215_radio_state_cmd_rx &&
+        rfic4_2400mhz_state != at86rf215_radio_state_cmd_rx
         )
     {
         ret = -1;
