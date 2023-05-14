@@ -36,8 +36,7 @@ void event_node_signal_ready(at86rf215_event_st* ev, int ready)
     pthread_mutex_unlock(&ev->ready_mutex);
 }
 
-static void
-handle_bb_irq(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t bbcn_irqs)
+static void handle_bb_irq(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t bbcn_irqs)
 {
 	struct at86rf215_radio *r = &h->priv.radios[radio];
 
@@ -84,23 +83,9 @@ handle_bb_irq(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t bbcn_irqs)
     {
         printf("INT @ BB%s: Frame buffer level\n", channel_st);
     }
-/*
-	switch (r->op_state) {
-		case AT86RF215_OP_STATE_TX:
-			if (bbcn_irqs & BIT(4)) {
-				r->op_state = AT86RF215_OP_STATE_IDLE;
-				at86rf215_set_cmd(h, AT86RF215_CMD_RF_TRXOFF, radio);
-				printf("%s TX frame complete.\n", __func__);
-			}
-			return;
-		default:
-			return;
-	}
-*/
 }
 
-static void
-handle_rf_irq(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rfn_irqs)
+static void handle_rf_irq(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rfn_irqs)
 {
 	struct at86rf215_radio *r = &h->priv.radios[radio];
 	
@@ -138,19 +123,6 @@ handle_rf_irq(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rfn_irqs)
     {
         printf("INT @ RADIO%s: I/Q interface sync failed\n", channel_st);
     }
-
-/*
-	switch (r->op_state) {
-		case AT86RF215_OP_STATE_TX:
-			if (rfn_irqs & BIT(1)) {
-				event_node_signal_ready(&r->trxready, 1);
-				printf("%s TRXREADY = 1.\n", __func__);
-			}
-			return;
-		default:
-			return;
-	}
-*/
 }
 
 /**
@@ -161,12 +133,12 @@ handle_rf_irq(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rfn_irqs)
  * @param h the device handler
  * @return 0 on success or negative error code
  */
-
-int
-at86rf215_irq_callback(int event, unsigned int line_offset, const struct timespec * time, void *data)
+int at86rf215_irq_callback(int event, unsigned int line_offset, const struct timespec * time, void *data)
 {
 	printf("%s\n", __func__);
 	struct at86rf215 *h = (struct at86rf215*)data;
+
+    // TODO : Move it into at86rf215_bb.c as ready() static function
 	int ret = ready(h);
 	if (ret) {
 		return ret;

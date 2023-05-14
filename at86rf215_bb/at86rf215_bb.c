@@ -85,8 +85,8 @@ int median(int a[], int n)
  * @param h the device handle
  * @return 0 on success or negative error code
  */
-int
-ready(const struct at86rf215 *h)
+ // TODO: Make it back to static
+int ready(const struct at86rf215 *h)
 {
 	if (!h) {
 		return -AT86RF215_INVAL_PARAM;
@@ -103,8 +103,7 @@ ready(const struct at86rf215 *h)
  * @param radio the RF frontend
  * @return 0 on success or negative error code
  */
-static int
-supports_rf(const struct at86rf215 *h,  at86rf215_radio_t radio)
+static int supports_rf(const struct at86rf215 *h,  at86rf215_radio_t radio)
 {
 	int ret = ready(h);
 	if (ret) {
@@ -129,8 +128,7 @@ supports_rf(const struct at86rf215 *h,  at86rf215_radio_t radio)
  * @param radio the RF frontend
  * @return 0 on success or negative error code
  */
-static int
-supports_mode(const struct at86rf215 *h,  at86rf215_chpm_t mode)
+static int supports_mode(const struct at86rf215 *h,  at86rf215_chpm_t mode)
 {
 	int ret = ready(h);
 	if (ret) {
@@ -161,24 +159,17 @@ supports_mode(const struct at86rf215 *h,  at86rf215_chpm_t mode)
  * @param os clock output selection
  * @return 0 on success or negative error code
  */
-int
-at86rf215_init(struct at86rf215 *h)
+int at86rf215_init(struct at86rf215 *h)
 {
 	if (!h) {
 		return -AT86RF215_INVAL_PARAM;
 	}
 
+	// TODO: Move out the SPI device init, can pass int spidev and store into at86rf215 structure
 	spi_init(&spidev, SPI_DEVICE, 0, 0, 2500000);
 
 	/* Reset the state of the private struct members */
 	memset(&h->priv, 0, sizeof(struct at86rf215_priv));
-
-	at86rf215_irq_enable(0);
-	/* Reset the IC */
-	at86rf215_set_rstn(0);
-	at86rf215_delay_us(1000);
-	at86rf215_set_rstn(1);
-	at86rf215_delay_us(1000);
 
 	uint8_t val = 0;
 	int ret = at86rf215_reg_read_8(&val, REG_RF_PN);
@@ -230,8 +221,7 @@ at86rf215_init(struct at86rf215 *h)
 	}
 
 	/* Set the RF_CFG */
-	ret = at86rf215_reg_write_8((h->irqmm << 3) | (h->irqp << 2) | h->pad_drv,
-	                            REG_RF_CFG);
+	ret = at86rf215_reg_write_8((h->irqmm << 3) | (h->irqp << 2) | h->pad_drv, REG_RF_CFG);
 	if (ret) {
 		return ret;
 	}
@@ -291,7 +281,6 @@ at86rf215_init(struct at86rf215 *h)
 	at86rf215_calibrate_device(h, AT86RF215_RF09, &h->cal.low_ch_i, &h->cal.low_ch_q);
     at86rf215_calibrate_device(h, AT86RF215_RF24, &h->cal.hi_ch_i, &h->cal.hi_ch_q);
 
-	at86rf215_irq_enable(1);
 	return AT86RF215_OK;
 }
 
@@ -302,8 +291,7 @@ at86rf215_init(struct at86rf215 *h)
  * @param radio the radio frontend
  * @return 0 on success or negative error code
  */
-static int
-radio_ready(const struct at86rf215 *h,  at86rf215_radio_t radio)
+static int radio_ready(const struct at86rf215 *h,  at86rf215_radio_t radio)
 {
 	int ret = supports_rf(h, radio);
 	if (ret) {
@@ -322,9 +310,8 @@ radio_ready(const struct at86rf215 *h,  at86rf215_radio_t radio)
  * @param conf configuration parameters
  * @return 0 on success or negative error code
  */
-int
-at86rf215_radio_conf(struct at86rf215 *h, at86rf215_radio_t radio,
-                     const struct at86rf215_radio_conf *conf)
+int at86rf215_radio_conf(struct at86rf215 *h, at86rf215_radio_t radio,
+                    	const struct at86rf215_radio_conf *conf)
 {
 	if (!conf) {
 		return -AT86RF215_INVAL_PARAM;
@@ -429,47 +416,13 @@ at86rf215_radio_conf(struct at86rf215 *h, at86rf215_radio_t radio,
 }
 
 /**
- * Controls the state of the RSTN pin
- * @param enable set to 1 to set the RSTN pin to high, 0 to set it to low
- * @return 0 on success or negative error code
- */
-__attribute__((weak)) int
-at86rf215_set_rstn(uint8_t enable)
-{
-	return AT86RF215_OK;
-}
-
-/**
- * Controls the state of the SELN pin
- * @param enable set to 1 to set the SELN pin to high, 0 to set it to low
- * @return 0 on success or negative error code
- */
-__attribute__((weak)) int
-at86rf215_set_seln(uint8_t enable)
-{
-	return AT86RF215_OK;
-}
-
-/**
- * Delays the execution by \p us microseconds
- * @param us the delay in microseconds
- */
-__attribute__((weak)) void
-at86rf215_delay_us(uint32_t us)
-{
-	//io_utils_usleep(us);
-	return;
-}
-
-/**
  * Reads from the SPI peripheral
  * @param out the output buffer to hold MISO response from the SPI peripheral
  * @param in input buffer containing MOSI data
  * @param len the length of the SPI transaction (max(MOSI, MISO))
  * @return 0 on success or negative error code
  */
-__attribute__((weak)) int
-at86rf215_spi_read(uint8_t *out, const uint8_t *in, size_t len)
+int at86rf215_spi_read(uint8_t *out, const uint8_t *in, size_t len)
 {
 	int ret;
 
@@ -480,7 +433,7 @@ at86rf215_spi_read(uint8_t *out, const uint8_t *in, size_t len)
 	}
 	else
 	{
-		ret = AT86RF215_SPI_READ_FAILED;
+		ret = -AT86RF215_SPI_READ_FAILED;
 	}
 	return ret;
 }
@@ -491,8 +444,7 @@ at86rf215_spi_read(uint8_t *out, const uint8_t *in, size_t len)
  * @param len the size of the input buffer
  * @return 0 on success or negative error code
  */
-__attribute__((weak)) int
-at86rf215_spi_write(const uint8_t *in, size_t len)
+int at86rf215_spi_write(const uint8_t *in, size_t len)
 {
 	int ret;
 
@@ -503,52 +455,43 @@ at86rf215_spi_write(const uint8_t *in, size_t len)
 	}
 	else
 	{
-		ret = AT86RF215_SPI_WRITE_FAILED;
+		ret = -AT86RF215_SPI_WRITE_FAILED;
 	}
 	return ret;
 }
 
 /**
  * Reads an 8-bit register
- * @note internally the function uses the at86rf215_set_seln() and
- * at86rf215_spi_read() to accomplish the SPI transaction. Developers should
+ * @note internally the function uses the at86rf215_spi_read() 
+ * to accomplish the SPI transaction. Developers should
  * provide a proper implementation of those functions.
  *
  * @param out pointer to hold the read value
  * @param reg the register to read
  * @return 0 on success or negative error code
  */
-int
-at86rf215_reg_read_8(uint8_t *out, uint16_t reg)
+int at86rf215_reg_read_8(uint8_t *out, uint16_t reg)
 {
 	if (!out) {
 		return -AT86RF215_INVAL_PARAM;
 	}
 	int ret = 0;
-	ret = at86rf215_set_seln(0);
-	if (ret) {
-		return ret;
-	}
 
-	at86rf215_irq_enable(0);
 	/* Construct properly the MOSI buffer */
 	uint8_t mosi[3] = {(reg >> 8) & 0x3F, reg & 0xFF, 0x0};
 	uint8_t miso[3] = {0x0, 0x0, 0x0};
 	ret = at86rf215_spi_read(miso, mosi, 3);
 	if (ret) {
-		at86rf215_irq_enable(1);
-		at86rf215_set_seln(1);
 		return ret;
 	}
 	*out = miso[2];
-	at86rf215_irq_enable(1);
-	return at86rf215_set_seln(1);
+	return AT86RF215_OK;
 }
 
 /**
  * Reads an 32-bit register
- * @note internally the function uses the at86rf215_set_seln() and
- * at86rf215_spi_read() to accomplish the SPI transaction. Developers should
+ * @note internally the function uses the at86rf215_spi_read() 
+ * to accomplish the SPI transaction. Developers should
  * provide a proper implementation of those functions.
  * @note the result is stored in a MS byte first order
  *
@@ -556,69 +499,53 @@ at86rf215_reg_read_8(uint8_t *out, uint16_t reg)
  * @param reg the register to read
  * @return 0 on success or negative error code
  */
-int
-at86rf215_reg_read_32(uint32_t *out, uint16_t reg)
+int at86rf215_reg_read_32(uint32_t *out, uint16_t reg)
 {
 	if (!out) {
 		return -AT86RF215_INVAL_PARAM;
 	}
 	int ret = 0;
-	ret = at86rf215_set_seln(0);
-	if (ret) {
-		return ret;
-	}
-	at86rf215_irq_enable(0);
+
 	/* Construct properly the MOSI buffer */
 	uint8_t mosi[6] = {(reg >> 8) & 0x3F, reg & 0xFF, 0x0, 0x0, 0x0, 0x0};
 	uint8_t miso[6] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 	ret = at86rf215_spi_read(miso, mosi, 6);
 	if (ret) {
-		at86rf215_set_seln(1);
-		at86rf215_irq_enable(1);
 		return ret;
 	}
 	*out = (miso[2] << 24) | (miso[3] << 16) | (miso[4] << 8) | miso[5];
-	at86rf215_irq_enable(1);
-	return at86rf215_set_seln(1);
+	return AT86RF215_OK;
 }
 
 /**
  * Writes an 8-bit register
  *
- * @note internally the function uses the at86rf215_set_seln() and
- * at86rf215_spi_write() to accomplish the SPI transaction. Developers should
+ * @note internally the function uses the at86rf215_spi_write() 
+ * to accomplish the SPI transaction. Developers should
  * provide a proper implementation of those functions.
  *
  * @param in the value to write
  * @param reg the register to write
  * @return 0 on success or negative error code
  */
-int
-at86rf215_reg_write_8(const uint8_t in, uint16_t reg)
+int at86rf215_reg_write_8(const uint8_t in, uint16_t reg)
 {
 	int ret = 0;
-	ret = at86rf215_set_seln(0);
-	if (ret) {
-		return ret;
-	}
-	at86rf215_irq_enable(0);
+
 	/* Construct properly the MOSI buffer */
 	uint8_t mosi[3] = {(reg >> 8) | 0x80, reg & 0xFF, in};
 	ret = at86rf215_spi_write(mosi, 3);
 	if (ret) {
-		at86rf215_set_seln(1);
-		at86rf215_irq_enable(1);
 		return ret;
 	}
-	at86rf215_irq_enable(1);
-	return at86rf215_set_seln(1);
+	return AT86RF215_OK;
 }
 
 /**
  * Writes an 16-bit register
  *
- * @note internally the function uses the at86rf215_set_seln() and
- * at86rf215_spi_write() to accomplish the SPI transaction. Developers should
+ * @note internally the function uses the at86rf215_spi_write() 
+ * to accomplish the SPI transaction. Developers should
  * provide a proper implementation of those functions.
  * @note the value is written in a MS byte first order
  *
@@ -626,25 +553,17 @@ at86rf215_reg_write_8(const uint8_t in, uint16_t reg)
  * @param reg the register to write
  * @return 0 on success or negative error code
  */
-int
-at86rf215_reg_write_16(const uint16_t in, uint16_t reg)
+int at86rf215_reg_write_16(const uint16_t in, uint16_t reg)
 {
 	int ret = 0;
-	ret = at86rf215_set_seln(0);
-	if (ret) {
-		return ret;
-	}
-	at86rf215_irq_enable(0);
+
 	/* Construct properly the MOSI buffer */
 	uint8_t mosi[4] = {(reg >> 8) | 0x80, reg & 0xFF, in >> 8, in & 0xFF};
 	ret = at86rf215_spi_write(mosi, 4);
 	if (ret) {
-		at86rf215_set_seln(1);
-		at86rf215_irq_enable(1);
 		return ret;
 	}
-	at86rf215_irq_enable(1);
-	return at86rf215_set_seln(1);
+	return AT86RF215_OK;
 }
 
 /**
@@ -654,9 +573,7 @@ at86rf215_reg_write_16(const uint16_t in, uint16_t reg)
  * @param radio the radio front-end to query its state
  * @return 0 on success or negative error code
  */
-int
-at86rf215_get_state(const struct at86rf215 *h, at86rf215_rf_state_t *state,
-                    at86rf215_radio_t radio)
+int at86rf215_get_state(const struct at86rf215 *h, at86rf215_rf_state_t *state, at86rf215_radio_t radio)
 {
 	int ret = supports_rf(h, radio);
 	if (ret) {
@@ -706,9 +623,7 @@ at86rf215_get_state(const struct at86rf215 *h, at86rf215_rf_state_t *state,
  * @param radio the radio front-end
  * @return 0 on success or negative error code
  */
-int
-at86rf215_set_cmd(struct at86rf215 *h, at86rf215_rf_cmd_t cmd,
-                  at86rf215_radio_t radio)
+int at86rf215_set_cmd(struct at86rf215 *h, at86rf215_rf_cmd_t cmd, at86rf215_radio_t radio)
 {
 	int ret = supports_rf(h, radio);
 	if (ret) {
@@ -780,8 +695,7 @@ at86rf215_set_cmd(struct at86rf215 *h, at86rf215_rf_cmd_t cmd,
  * @param mode the chip mode
  * @return 0 on success or negative error code
  */
-int
-at86rf215_set_mode(struct at86rf215 *h, at86rf215_chpm_t mode)
+int at86rf215_set_mode(struct at86rf215 *h, at86rf215_chpm_t mode)
 {
 	int ret = supports_mode(h, mode);
 	if (ret) {
@@ -808,15 +722,12 @@ at86rf215_set_mode(struct at86rf215 *h, at86rf215_chpm_t mode)
  * @param radio the transceiver to reset
  * @return 0 on success or negative error code
  */
-int
-at86rf215_transceiver_reset(struct at86rf215 *h, at86rf215_radio_t radio)
+int at86rf215_transceiver_reset(struct at86rf215 *h, at86rf215_radio_t radio)
 {
 	return at86rf215_set_cmd(h, AT86RF215_CMD_RF_RESET, radio);
 }
 
-int
-at86rf215_set_bbc_irq_mask(struct at86rf215 *h, at86rf215_radio_t radio,
-                           uint8_t mask)
+int at86rf215_set_bbc_irq_mask(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t mask)
 {
 	int ret = supports_rf(h, radio);
 	if (ret) {
@@ -844,9 +755,7 @@ at86rf215_set_bbc_irq_mask(struct at86rf215 *h, at86rf215_radio_t radio,
  * @param mask the activation mask
  * @return 0 on success or negative error code
  */
-int
-at86rf215_set_radio_irq_mask(struct at86rf215 *h, at86rf215_radio_t radio,
-                             uint8_t mask)
+int at86rf215_set_radio_irq_mask(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t mask)
 {
 	int ret = supports_rf(h, radio);
 	if (ret) {
@@ -861,8 +770,7 @@ at86rf215_set_radio_irq_mask(struct at86rf215 *h, at86rf215_radio_t radio,
 	return at86rf215_reg_write_8(mask, reg);
 }
 
-static bool
-is_lpf_valid(at86rf215_lpfcut_t lpf)
+static bool is_lpf_valid(at86rf215_lpfcut_t lpf)
 {
 	switch (lpf) {
 		case AT86RF215_RF_FLC80KHZ:
@@ -882,8 +790,7 @@ is_lpf_valid(at86rf215_lpfcut_t lpf)
 	return 0;
 }
 
-static bool
-is_paramp_valid(at86rf215_paramp_t paramp)
+static bool is_paramp_valid(at86rf215_paramp_t paramp)
 {
 	switch (paramp) {
 		case AT86RF215_RF_PARAMP4U:
@@ -903,9 +810,7 @@ is_paramp_valid(at86rf215_paramp_t paramp)
  * @param lpf LPF setting
  * @return 0 on success or negative error code
  */
-int
-at86rf215_set_txcutc(struct at86rf215 *h, at86rf215_radio_t radio,
-                     at86rf215_paramp_t paramp, at86rf215_lpfcut_t lpf)
+int at86rf215_set_txcutc(struct at86rf215 *h, at86rf215_radio_t radio, at86rf215_paramp_t paramp, at86rf215_lpfcut_t lpf)
 {
 	int ret = supports_rf(h, radio);
 	if (ret) {
@@ -931,9 +836,7 @@ at86rf215_set_txcutc(struct at86rf215 *h, at86rf215_radio_t radio,
  * @param sr the sampling rate setting
  * @return 0 on success or negative error code
  */
-static int
-set_txdfe(at86rf215_radio_t radio, uint8_t rcut,
-          uint8_t dm, at86rf215_sr_t sr)
+static int set_txdfe(at86rf215_radio_t radio, uint8_t rcut, uint8_t dm, at86rf215_sr_t sr)
 {
 	uint16_t reg = 0x0;
 	if (radio == AT86RF215_RF09) {
@@ -970,8 +873,7 @@ set_txdfe(at86rf215_radio_t radio, uint8_t rcut,
  * @param sr the sampling rate setting
  * @return 0 on success or negative error code
  */
-int
-at86rf215_set_txdfe(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rcut, uint8_t dm, at86rf215_sr_t sr)
+int at86rf215_set_txdfe(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rcut, uint8_t dm, at86rf215_sr_t sr)
 {
 	int ret = supports_rf(h, radio);
 	if (ret) {
@@ -989,8 +891,7 @@ at86rf215_set_txdfe(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rcut, 
  * @param sr the sampling rate setting
  * @return 0 on success or negative error code
  */
-static int
-set_rxdfe(at86rf215_radio_t radio, uint8_t rcut, at86rf215_sr_t sr)
+static int set_rxdfe(at86rf215_radio_t radio, uint8_t rcut, at86rf215_sr_t sr)
 {
 	uint16_t reg = 0x0;
 	if (radio == AT86RF215_RF09) {
@@ -1026,8 +927,7 @@ set_rxdfe(at86rf215_radio_t radio, uint8_t rcut, at86rf215_sr_t sr)
  * @param sr the sampling rate setting
  * @return 0 on success or negative error code
  */
-int
-at86rf215_set_rxdfe(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rcut, at86rf215_sr_t sr)
+int at86rf215_set_rxdfe(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rcut, at86rf215_sr_t sr)
 {
 	int ret = supports_rf(h, radio);
 	if (ret) {
@@ -1046,9 +946,7 @@ at86rf215_set_rxdfe(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rcut, 
  * @param rcut RX filter relative to the cut-off frequency
  * @return 0 on success or negative error code
  */
-int
-at86rf215_set_rx_rcut(struct at86rf215 *h, at86rf215_radio_t radio,
-                      uint8_t rcut)
+int at86rf215_set_rx_rcut(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rcut)
 {
 	int ret = supports_rf(h, radio);
 	if (ret) {
@@ -1078,8 +976,7 @@ at86rf215_set_rx_rcut(struct at86rf215 *h, at86rf215_radio_t radio,
  * @return 0 on success or negative error code
  */
 int
-at86rf215_set_pac(struct at86rf215 *h, at86rf215_radio_t radio,
-                  at86rf215_pacur_t pacur, uint8_t power)
+at86rf215_set_pac(struct at86rf215 *h, at86rf215_radio_t radio, at86rf215_pacur_t pacur, uint8_t power)
 {
 	int ret = supports_rf(h, radio);
 	if (ret) {
@@ -1116,9 +1013,7 @@ at86rf215_set_pac(struct at86rf215 *h, at86rf215_radio_t radio,
  * @param channel channel index
  * @return 0 on success or negative error code
  */
-int
-at86rf215_set_channel(struct at86rf215 *h, at86rf215_radio_t radio,
-                      uint16_t channel)
+int at86rf215_set_channel(struct at86rf215 *h, at86rf215_radio_t radio, uint16_t channel)
 {
 	int ret = radio_ready(h, radio);
 	if (ret) {
@@ -1165,9 +1060,7 @@ at86rf215_set_channel(struct at86rf215 *h, at86rf215_radio_t radio,
  * @param freq the center frequency in Hz
  * @return 0 on success or negative error code
  */
-int
-at86rf215_set_freq(struct at86rf215 *h, at86rf215_radio_t radio,
-                   uint32_t freq)
+int at86rf215_set_freq(struct at86rf215 *h, at86rf215_radio_t radio, uint32_t freq)
 {
 	int ret = radio_ready(h, radio);
 	if (ret) {
@@ -1240,32 +1133,13 @@ at86rf215_set_freq(struct at86rf215 *h, at86rf215_radio_t radio,
 }
 
 /**
- * Enable/disable the AT86RF215 IRQ line
- * @note Especially for bare metal applications (no-OS), race conditions may
- * occur, while a write SPI transaction activates an IRQ. The IRQ handler will
- * initiate an SPI read transaction before the end of the SPI write. Users may
- * override the default implementation of this function according to their
- * execution environment.
- *
- * @param enable 1 to enable, 0 to disable
- * @return 0 on success or negative error code
- */
-__attribute__((weak)) int
-at86rf215_irq_enable(uint8_t enable)
-{
-	return AT86RF215_OK;
-}
-
-/**
  * Get the PLL lock status for the corresponding RF frontend
  * @param h the device handle
  * @param status pointer to store the lock status result
  * @param radio the RF frontend
  * @return 0 on success or negative error code
  */
-int
-at86rf215_get_pll_ls(const struct at86rf215 *h, at86rf215_pll_ls_t *status,
-                     at86rf215_radio_t radio)
+int at86rf215_get_pll_ls(const struct at86rf215 *h, at86rf215_pll_ls_t *status, at86rf215_radio_t radio)
 {
 	int ret = radio_ready(h, radio);
 	if (ret) {
@@ -1296,9 +1170,7 @@ at86rf215_get_pll_ls(const struct at86rf215 *h, at86rf215_pll_ls_t *status,
  * @param bw the RX bandwidth setting
  * @return 0 on success or negative error code
  */
-int
-at86rf215_set_bw(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t if_inv,
-                 uint8_t if_shift, at86rf215_rx_bw_t bw)
+int at86rf215_set_bw(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t if_inv, uint8_t if_shift, at86rf215_rx_bw_t bw)
 {
 	int ret = radio_ready(h, radio);
 	if (ret) {
@@ -1333,8 +1205,7 @@ at86rf215_set_bw(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t if_inv,
 	return at86rf215_reg_write_8(val, reg);
 }
 
-int
-at86rf215_set_edd(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t df, at86rf215_edd_dtb_t dtb)
+int at86rf215_set_edd(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t df, at86rf215_edd_dtb_t dtb)
 {
 	int ret = radio_ready(h, radio);
 	if (ret) {
@@ -1360,8 +1231,7 @@ at86rf215_set_edd(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t df, at86
  * @return 0 on success, -AT86RF215_INVAL_VAL in case of invalid RSSI
  * or other appropriate negative error code
  */
-int
-at86rf215_get_rssi(struct at86rf215 *h, at86rf215_radio_t radio, float *rssi)
+int at86rf215_get_rssi(struct at86rf215 *h, at86rf215_radio_t radio, float *rssi)
 {
 	int ret = radio_ready(h, radio);
 	if (ret) {
@@ -1390,8 +1260,7 @@ at86rf215_get_rssi(struct at86rf215 *h, at86rf215_radio_t radio, float *rssi)
 }
 
 
-int
-at86rf215_get_edv(struct at86rf215 *h, at86rf215_radio_t radio, float *edv)
+int at86rf215_get_edv(struct at86rf215 *h, at86rf215_radio_t radio, float *edv)
 {
 	int ret = radio_ready(h, radio);
 	if (ret) {
@@ -1419,9 +1288,7 @@ at86rf215_get_edv(struct at86rf215 *h, at86rf215_radio_t radio, float *edv)
 	return AT86RF215_OK;
 }
 
-int
-at86rf215_get_agc_gain(struct at86rf215 *h, at86rf215_radio_t radio,
-                       uint8_t *gain)
+int at86rf215_get_agc_gain(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t *gain)
 {
 	int ret = radio_ready(h, radio);
 	if (ret) {
@@ -1446,9 +1313,7 @@ at86rf215_get_agc_gain(struct at86rf215 *h, at86rf215_radio_t radio,
 	return AT86RF215_OK;
 }
 
-static int
-bb_conf_mrfsk(struct at86rf215 *h, at86rf215_radio_t radio,
-              const struct at86rf215_bb_conf *conf)
+static int bb_conf_mrfsk(struct at86rf215 *h, at86rf215_radio_t radio, const struct at86rf215_bb_conf *conf)
 {
 	/*
 	 * In order to process efficiently the configuration registers for
@@ -1724,9 +1589,7 @@ bb_conf_mrfsk(struct at86rf215 *h, at86rf215_radio_t radio,
 	return AT86RF215_OK;
 }
 
-static int
-bb_conf_mrofdm(struct at86rf215 *h, at86rf215_radio_t radio,
-              const struct at86rf215_bb_conf *conf)
+static int bb_conf_mrofdm(struct at86rf215 *h, at86rf215_radio_t radio, const struct at86rf215_bb_conf *conf)
 {
 	/*
 	 * In order to process efficiently the configuration registers for
@@ -1826,9 +1689,7 @@ bb_conf_mrofdm(struct at86rf215 *h, at86rf215_radio_t radio,
  * @param conf the condiguration of the baseband core
  * @return 0 on success or negative error code
  */
-int
-at86rf215_bb_conf(struct at86rf215 *h, at86rf215_radio_t radio,
-                  const struct at86rf215_bb_conf *conf)
+int at86rf215_bb_conf(struct at86rf215 *h, at86rf215_radio_t radio, const struct at86rf215_bb_conf *conf)
 {
 	int ret = supports_rf(h, radio);
 	if (ret) {
@@ -1840,7 +1701,6 @@ at86rf215_bb_conf(struct at86rf215 *h, at86rf215_radio_t radio,
 	uint8_t val = conf->pt | (conf->fcst << 3) | (conf->txafcs << 4)
 	              | (conf->fcsfe << 6) | (conf->ctx << 7);
 
-	printf("value = 0x%x\n", val);
 	uint16_t reg = 0;
 	if (radio == AT86RF215_RF09) {
 		reg = REG_BBC0_PC;
@@ -1880,8 +1740,7 @@ at86rf215_bb_conf(struct at86rf215 *h, at86rf215_radio_t radio,
  * @param en 1 to enable, 0 to disable
  * @return 0 on success or negative error code
  */
-int
-at86rf215_bb_enable(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t en)
+int at86rf215_bb_enable(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t en)
 {
 	int ret = supports_rf(h, radio);
 	if (ret) {
@@ -1912,9 +1771,7 @@ at86rf215_bb_enable(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t en)
  * @param len the size of the PSDU
  * @return 0 on success or negative error code
  */
-static int
-write_tx_fifo(const struct at86rf215 *h, at86rf215_radio_t radio,
-              const uint8_t *b, size_t len)
+static int write_tx_fifo(const struct at86rf215 *h, at86rf215_radio_t radio, const uint8_t *b, size_t len)
 {
 	int ret = 0;
 	if (radio == AT86RF215_RF09) {
@@ -1929,24 +1786,15 @@ write_tx_fifo(const struct at86rf215 *h, at86rf215_radio_t radio,
 		}
 
 		/* Fill the FIFO */
-		ret = at86rf215_set_seln(0);
-		if (ret) {
-			return ret;
-		}
-		at86rf215_irq_enable(0);
 		uint8_t mosi[2] = {(REG_BBC0_FBTXS >> 8) | 0x80,
 		                   REG_BBC0_FBTXS & 0xFF
 		                  };
 		ret = at86rf215_spi_write(mosi, 2);
 		if (ret) {
-			at86rf215_set_seln(1);
-			at86rf215_irq_enable(1);
 			return ret;
 		}
 		ret = at86rf215_spi_write(b, len);
 		if (ret) {
-			at86rf215_set_seln(1);
-			at86rf215_irq_enable(1);
 			return ret;
 		}
 	} else {
@@ -1961,29 +1809,19 @@ write_tx_fifo(const struct at86rf215 *h, at86rf215_radio_t radio,
 		}
 
 		/* Fill the FIFO */
-		ret = at86rf215_set_seln(0);
-		if (ret) {
-			return ret;
-		}
-		at86rf215_irq_enable(0);
 		uint8_t mosi[2] = {(REG_BBC1_FBTXS >> 8) | 0x80,
 		                   REG_BBC1_FBTXS & 0xFF
 		                  };
 		ret = at86rf215_spi_write(mosi, 2);
 		if (ret) {
-			at86rf215_set_seln(1);
-			at86rf215_irq_enable(1);
 			return ret;
 		}
 		ret = at86rf215_spi_write(b, len);
 		if (ret) {
-			at86rf215_set_seln(1);
-			at86rf215_irq_enable(1);
 			return ret;
 		}
 	}
-	at86rf215_irq_enable(1);
-	return at86rf215_set_seln(1);
+	return AT86RF215_OK;
 }
 
 /**
@@ -1996,9 +1834,7 @@ write_tx_fifo(const struct at86rf215 *h, at86rf215_radio_t radio,
  * @param len the number of bytes to send
  * @return 0 on success or negative error code
  */
-int
-at86rf215_tx_frame(struct at86rf215 *h, at86rf215_radio_t radio,
-                   const uint8_t *psdu, size_t len)
+int at86rf215_tx_frame(struct at86rf215 *h, at86rf215_radio_t radio, const uint8_t *psdu, size_t len)
 {
 	int ret = supports_rf(h, radio);
 	if (ret) {
@@ -2025,9 +1861,9 @@ at86rf215_tx_frame(struct at86rf215 *h, at86rf215_radio_t radio,
 		}
 	}
 
+	// TODO: May be can remove
 	printf("op_state = %d\n", h->priv.radios[radio].op_state);
 	while (h->priv.radios[radio].op_state != AT86RF215_OP_STATE_IDLE) {
-		at86rf215_delay_us(1);
 	}
 
 	h->priv.radios[radio].op_state = AT86RF215_OP_STATE_TX;
@@ -2036,6 +1872,7 @@ at86rf215_tx_frame(struct at86rf215 *h, at86rf215_radio_t radio,
 		return ret;
 	}
 
+	// TODO: Remove after verify
 	at86rf215_rf_state_t radio_state;
 	at86rf215_get_state(h, &radio_state, radio);
 	printf("radio state = %d\n", radio_state);
@@ -2075,9 +1912,7 @@ at86rf215_tx_frame(struct at86rf215 *h, at86rf215_radio_t radio,
  * @param conf IQ configration
  * @return 0 on success or negative error code
  */
-int
-at86rf215_iq_conf(struct at86rf215 *h, at86rf215_radio_t radio,
-                  const struct at86rf215_iq_conf *conf)
+int at86rf215_iq_conf(struct at86rf215 *h, at86rf215_radio_t radio, const struct at86rf215_iq_conf *conf)
 {
 	int ret = supports_rf(h, radio);
 	if (ret) {
@@ -2139,9 +1974,7 @@ at86rf215_iq_conf(struct at86rf215 *h, at86rf215_radio_t radio,
 }
 
 
-int
-at86rf215_get_irq_mask(const struct at86rf215 *h, uint8_t *mask,
-                     at86rf215_radio_t radio)
+int at86rf215_get_irq_mask(const struct at86rf215 *h, uint8_t *mask, at86rf215_radio_t radio)
 {
 	int ret = radio_ready(h, radio);
 	if (ret) {
@@ -2188,8 +2021,7 @@ int at86rf215_calibrate_device(struct at86rf215 *h, at86rf215_radio_t radio, int
     return 0;
 }
 
-void at86rf215_radio_set_tx_iq_calibration(const struct at86rf215 *h, at86rf215_radio_t radio,
-                                                int cal_i, int cal_q)
+void at86rf215_radio_set_tx_iq_calibration(const struct at86rf215 *h, at86rf215_radio_t radio, int cal_i, int cal_q)
 {
 	/*
 	int ret = radio_ready(h, radio);

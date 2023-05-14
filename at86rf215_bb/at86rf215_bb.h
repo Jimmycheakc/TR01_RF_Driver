@@ -17,8 +17,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef AT86RF215_H_
-#define AT86RF215_H_
+#ifndef __AT86RF215_BB_H__
+#define __AT86RF215_BB_H__
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -193,27 +193,20 @@ typedef enum {
  * Power amplifier current settings
  */
 typedef enum {
-	AT86RF215_PACUR_22mA_RED =
-	        0x0, //!< current reduction by about 22mA (3dB reduction of max. small signal gain)
-	AT86RF215_PACUR_18mA_RED =
-	        0x1, //!< current reduction by about 18mA (2dB reduction of max. small signal gain)
-	AT86RF215_PACUR_11mA_RED =
-	        0x2, //!< current reduction by about 11mA (1dB reduction of max. small signal gain)
-	AT86RF215_PACUR_NO_RED =
-	        0x3, //!< No power amplifier current reduction (max. transmit small signal gain)
+	AT86RF215_PACUR_22mA_RED = 0x0, //!< current reduction by about 22mA (3dB reduction of max. small signal gain)
+	AT86RF215_PACUR_18mA_RED = 0x1, //!< current reduction by about 18mA (2dB reduction of max. small signal gain)
+	AT86RF215_PACUR_11mA_RED = 0x2, //!< current reduction by about 11mA (1dB reduction of max. small signal gain)
+	AT86RF215_PACUR_NO_RED 	 = 0x3, //!< No power amplifier current reduction (max. transmit small signal gain)
 } at86rf215_pacur_t;
 
 /**
  * Channel mode configuration
  */
 typedef enum {
-	AT86RF215_CM_IEEE = 0, //!< IEEE compliant
-	AT86RF215_CM_FINE_RES_04 =
-	        1, //!< Fine resolution (389.5-510.0)MHz with 99.182Hz channel stepping
-	AT86RF215_CM_FINE_RES_09 =
-	        2, //!< Fine resolution (779-1020)MHz with 198.364Hz channel stepping
-	AT86RF215_CM_FINE_RES_24 =
-	        3 //!< Fine resolution (2400-2483.5)MHz with 396.728Hz channel stepping
+	AT86RF215_CM_IEEE 		 = 0, //!< IEEE compliant
+	AT86RF215_CM_FINE_RES_04 = 1, //!< Fine resolution (389.5-510.0)MHz with 99.182Hz channel stepping
+	AT86RF215_CM_FINE_RES_09 = 2, //!< Fine resolution (779-1020)MHz with 198.364Hz channel stepping
+	AT86RF215_CM_FINE_RES_24 = 3, //!< Fine resolution (2400-2483.5)MHz with 396.728Hz channel stepping
 } at86rf215_cm_t;
 
 /**
@@ -222,7 +215,7 @@ typedef enum {
 typedef enum {
 	AT86RF215_PLL_LBW_DEFAULT = 0, //!< Default
 	AT86RF215_PLL_LBW_SMALLER = 1, //!< 15% smaller PLL loop bandwidth
-	AT86RF215_PLL_LBW_LARGER  = 2  //!< 15% larger PLL loop bandwidth
+	AT86RF215_PLL_LBW_LARGER  = 2, //!< 15% larger PLL loop bandwidth
 } at86rf215_pll_lbw_t;
 
 /**
@@ -230,7 +223,7 @@ typedef enum {
  */
 typedef enum {
 	AT86RF215_PLL_UNLOCKED = 0, //!< PLL is not locked
-	AT86RF215_PLL_LOCKED   = 1  //!< PLL is locked
+	AT86RF215_PLL_LOCKED   = 1, //!< PLL is locked
 } at86rf215_pll_ls_t;
 
 /**
@@ -240,7 +233,7 @@ typedef enum {
 	AT86RF215_RF_DRV2 = 0, //!< 2 mA
 	AT86RF215_RF_DRV4 = 1, //!< 4 mA
 	AT86RF215_RF_DRV6 = 2, //!< 6 mA
-	AT86RF215_RF_DRV8 = 3  //!< 8 mA
+	AT86RF215_RF_DRV8 = 3, //!< 8 mA
 } at86rf215_drv_t;
 
 /**
@@ -329,7 +322,7 @@ typedef enum {
  */
 typedef enum {
 	AT86RF215_2FSK = 0, //!< 2-FSK
-	AT86RF215_4FSK = 1  //!< 4-FSK
+	AT86RF215_4FSK = 1, //!< 4-FSK
 } at86rf215_fsk_t;
 
 /**
@@ -341,7 +334,7 @@ typedef enum {
 	AT86RF215_FSK_SRATE_150 = 2, //!< 150 kHz
 	AT86RF215_FSK_SRATE_200 = 3, //!< 200 kHz
 	AT86RF215_FSK_SRATE_300 = 4, //!< 300 kHz
-	AT86RF215_FSK_SRATE_400 = 5  //!< 400 kHz
+	AT86RF215_FSK_SRATE_400 = 5, //!< 400 kHz
 } at86rf215_fsk_srate_t;
 
 /**
@@ -351,19 +344,18 @@ typedef enum {
  * The minimum input signal level is -110dBm.
  */
 typedef enum {
-	AT86RF215_FSK_RXO_6DB  = 0,    //!< Receiver restarted by >6dB stronger frame
-	AT86RF215_FSK_RXO_12DB = 1,    //!< Receiver restarted by >12dB stronger frame
-	AT86RF215_FSK_RXO_18DB = 2,    //!< Receiver restarted by >18dB stronger frame
-	AT86RF215_FSK_RXO_DISABLED = 3 //!< Receiver override disabled
+	AT86RF215_FSK_RXO_6DB  	   = 0,    //!< Receiver restarted by >6dB stronger frame
+	AT86RF215_FSK_RXO_12DB 	   = 1,    //!< Receiver restarted by >12dB stronger frame
+	AT86RF215_FSK_RXO_18DB 	   = 2,    //!< Receiver restarted by >18dB stronger frame
+	AT86RF215_FSK_RXO_DISABLED = 3,	   //!< Receiver override disabled
 } at86rf215_fsk_rxo_t;
 
 /**
  * FSK FEC Scheme
  */
 typedef enum {
-	AT86RF215_FSK_FEC_NRNSC =
-	        0, //!< non-recursive and non-systematic convolutional cod
-	AT86RF215_FSK_FEC_RSC = 1 //!< recursive and systematic convolutional code
+	AT86RF215_FSK_FEC_NRNSC = 0, //!< non-recursive and non-systematic convolutional cod
+	AT86RF215_FSK_FEC_RSC 	= 1, //!< recursive and systematic convolutional code
 } at86rf215_fsk_fecs_t;
 
 /**
@@ -579,152 +571,90 @@ struct at86rf215 {
 	gpio_interrupt_t*				  irq_data;
 };
 
-int
-ready(const struct at86rf215 *h);
+int ready(const struct at86rf215 *h);
 
 void event_node_init(at86rf215_event_st* ev);
+
 void event_node_close(at86rf215_event_st* ev);
+
 void event_node_wait_ready(at86rf215_event_st* ev);
+
 void event_node_signal_ready(at86rf215_event_st* ev, int ready);
 
-int
-at86rf215_init(struct at86rf215 *h);
+int at86rf215_init(struct at86rf215 *h);
 
-int
-at86rf215_radio_conf(struct at86rf215 *h, at86rf215_radio_t radio,
-                     const struct at86rf215_radio_conf *conf);
+int at86rf215_radio_conf(struct at86rf215 *h, at86rf215_radio_t radio, const struct at86rf215_radio_conf *conf);
 
-int
-at86rf215_set_rstn(uint8_t enable);
+int at86rf215_spi_read(uint8_t *out, const uint8_t *in, size_t len);
 
-int
-at86rf215_set_seln(uint8_t enable);
+int at86rf215_spi_write(const uint8_t *in, size_t len);
 
-void
-at86rf215_delay_us(uint32_t us);
+int at86rf215_reg_read_8(uint8_t *out, uint16_t reg);
 
-int
-at86rf215_spi_read(uint8_t *out, const uint8_t *in, size_t len);
+int at86rf215_reg_read_32(uint32_t *out, uint16_t reg);
 
-int
-at86rf215_spi_write(const uint8_t *in, size_t len);
+int at86rf215_reg_write_8(const uint8_t in, uint16_t reg);
 
-int
-at86rf215_reg_read_8(uint8_t *out, uint16_t reg);
+int at86rf215_reg_write_16(const uint16_t in, uint16_t reg);
 
-int
-at86rf215_reg_read_32(uint32_t *out, uint16_t reg);
+int at86rf215_get_state(const struct at86rf215 *h, at86rf215_rf_state_t *state, at86rf215_radio_t radio);
 
-int
-at86rf215_reg_write_8(const uint8_t in, uint16_t reg);
+int at86rf215_set_cmd(struct at86rf215 *h, at86rf215_rf_cmd_t cmd, at86rf215_radio_t radio);
 
-int
-at86rf215_reg_write_16(const uint16_t in, uint16_t reg);
+int at86rf215_set_mode(struct at86rf215 *h, at86rf215_chpm_t mode);
 
-int
-at86rf215_get_state(const struct at86rf215 *h, at86rf215_rf_state_t *state,
-                    at86rf215_radio_t radio);
+int at86rf215_transceiver_reset(struct at86rf215 *h, at86rf215_radio_t radio);
 
-int
-at86rf215_set_cmd(struct at86rf215 *h, at86rf215_rf_cmd_t cmd,
-                  at86rf215_radio_t radio);
+int at86rf215_set_bbc_irq_mask(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t mask);
 
-int
-at86rf215_set_mode(struct at86rf215 *h, at86rf215_chpm_t mode);
+int at86rf215_set_radio_irq_mask(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t mask);
 
-int
-at86rf215_transceiver_reset(struct at86rf215 *h, at86rf215_radio_t radio);
+int at86rf215_set_txcutc(struct at86rf215 *h, at86rf215_radio_t radio, at86rf215_paramp_t paramp, at86rf215_lpfcut_t lpf);
 
-int
-at86rf215_set_bbc_irq_mask(struct at86rf215 *h, at86rf215_radio_t radio,
-                           uint8_t mask);
+int at86rf215_set_rxdfe(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rcut, at86rf215_sr_t sr);
 
-int
-at86rf215_set_radio_irq_mask(struct at86rf215 *h, at86rf215_radio_t radio,
-                             uint8_t mask);
+int at86rf215_set_txdfe(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rcut, uint8_t dm, at86rf215_sr_t sr);
 
-int
-at86rf215_set_txcutc(struct at86rf215 *h, at86rf215_radio_t radio,
-                     at86rf215_paramp_t paramp, at86rf215_lpfcut_t lpf);
+int at86rf215_set_pac(struct at86rf215 *h, at86rf215_radio_t radio, at86rf215_pacur_t pacur, uint8_t power);
 
-int
-at86rf215_set_rxdfe(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rcut, at86rf215_sr_t sr);
+int at86rf215_set_channel(struct at86rf215 *h, at86rf215_radio_t radio, uint16_t channel);
 
-int
-at86rf215_set_txdfe(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rcut, uint8_t dm, at86rf215_sr_t sr);
+int at86rf215_set_freq(struct at86rf215 *h, at86rf215_radio_t radio, uint32_t freq);
 
-int
-at86rf215_set_pac(struct at86rf215 *h, at86rf215_radio_t radio,
-                  at86rf215_pacur_t pacur, uint8_t power);
+int at86rf215_get_pll_ls(const struct at86rf215 *h, at86rf215_pll_ls_t *status, at86rf215_radio_t radio);
 
-int
-at86rf215_set_channel(struct at86rf215 *h, at86rf215_radio_t radio,
-                      uint16_t channel);
+int at86rf215_set_bw(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t if_inv, uint8_t if_shift, at86rf215_rx_bw_t bw);
 
-int
-at86rf215_set_freq(struct at86rf215 *h, at86rf215_radio_t radio, uint32_t freq);
+int at86rf215_set_edd(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t df, at86rf215_edd_dtb_t dtb);
 
-int
-at86rf215_get_pll_ls(const struct at86rf215 *h, at86rf215_pll_ls_t *status,
-                     at86rf215_radio_t radio);
+int at86rf215_get_rssi(struct at86rf215 *h, at86rf215_radio_t radio, float *rssi);
 
-int
-at86rf215_set_bw(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t if_inv,
-                 uint8_t if_shift, at86rf215_rx_bw_t bw);
+int at86rf215_get_edv(struct at86rf215 *h, at86rf215_radio_t radio, float *edv);
 
-int
-at86rf215_set_edd(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t df, at86rf215_edd_dtb_t dtb);
+int at86rf215_get_agc_gain(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t *gain);
 
-int
-at86rf215_get_rssi(struct at86rf215 *h, at86rf215_radio_t radio, float *rssi);
+int at86rf215_irq_callback(int event, unsigned int line_offset, const struct timespec * time, void *data);
 
-int
-at86rf215_get_edv(struct at86rf215 *h, at86rf215_radio_t radio, float *edv);
+int at86rf215_irq_user_callback(const struct at86rf215 *h, uint8_t rf09_irqs, uint8_t rf24_irqs, uint8_t bbc0_irqs, uint8_t bbc1_irqs);
 
-int
-at86rf215_get_agc_gain(struct at86rf215 *h, at86rf215_radio_t radio,
-                       uint8_t *gain);
+int at86rf215_bb_conf(struct at86rf215 *h, at86rf215_radio_t radio, const struct at86rf215_bb_conf *conf);
 
-int
-at86rf215_irq_enable(uint8_t enable);
+int at86rf215_bb_enable(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t en);
 
-int
-at86rf215_irq_callback(int event, unsigned int line_offset, const struct timespec * time, void *data);
+int at86rf215_tx_frame(struct at86rf215 *h, at86rf215_radio_t radio, const uint8_t *psdu, size_t len);
 
-int
-at86rf215_irq_user_callback(const struct at86rf215 *h, uint8_t rf09_irqs,
-                            uint8_t rf24_irqs, uint8_t bbc0_irqs,
-                            uint8_t bbc1_irqs);
+int at86rf215_iq_conf(struct at86rf215 *h, at86rf215_radio_t radio, const struct at86rf215_iq_conf *conf);
 
-int
-at86rf215_bb_conf(struct at86rf215 *h, at86rf215_radio_t radio,
-                  const struct at86rf215_bb_conf *conf);
-
-int
-at86rf215_bb_enable(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t en);
-
-int
-at86rf215_tx_frame(struct at86rf215 *h, at86rf215_radio_t radio,
-                   const uint8_t *psdu, size_t len);
-
-int
-at86rf215_iq_conf(struct at86rf215 *h, at86rf215_radio_t radio,
-                  const struct at86rf215_iq_conf *conf);
-
-int
-at86rf215_get_irq_mask(const struct at86rf215 *h, uint8_t *mask,
-                     at86rf215_radio_t radio);
+int at86rf215_get_irq_mask(const struct at86rf215 *h, uint8_t *mask, at86rf215_radio_t radio);
 
 int at86rf215_calibrate_device(struct at86rf215 *h, at86rf215_radio_t radio, int* i, int* q);
 
-void at86rf215_radio_set_tx_iq_calibration(const struct at86rf215 *h, at86rf215_radio_t radio,
-                                                int cal_i, int cal_q);
+void at86rf215_radio_set_tx_iq_calibration(const struct at86rf215 *h, at86rf215_radio_t radio, int cal_i, int cal_q);
 
-void at86rf215_radio_get_tx_iq_calibration(const struct at86rf215 *h, at86rf215_radio_t radio,
-                                                int *cal_i, int *cal_q);
+void at86rf215_radio_get_tx_iq_calibration(const struct at86rf215 *h, at86rf215_radio_t radio, int *cal_i, int *cal_q);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* AT86RF215_H_ */
+#endif /* __AT86RF215_BB_H__ */

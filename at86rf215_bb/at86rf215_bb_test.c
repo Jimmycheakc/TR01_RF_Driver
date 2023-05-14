@@ -9,17 +9,8 @@
 #include "../io_utils/io_utils.h"
 #include "../spi/spi.h"
 
-struct gpiod_line;
-
 #define GPIO_CHIP_NAME "gpiochip5"
 #define GPIO_PIN_NUM    8
-
-int
-at86rf215_irq_callback_temp(int event, unsigned int line_offset, const struct timespec * time, void *data)
-{
-    printf("%s\n", __func__);
-    return 0;
-}
 
 int transmit_frame()
 {
