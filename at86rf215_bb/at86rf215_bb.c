@@ -22,8 +22,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include "../io_utils/io_utils.h"
 #include "../spi/spi.h"
+#include "time.h"
 
 #define INIT_MAGIC_VAL 0x92c2f0e3
 
@@ -47,12 +50,9 @@
 
 #define BIT(n) (1UL << (n))
 
-#define SPI_DEVICE "/dev/spidev1.0"
-static spi_t spidev;
-
 #define NUM_CAL_STEPS 7
 
-void swap(int *p,int *q) 
+static void swap(int *p,int *q) 
 {
    int t;  
    t=*p; 
@@ -60,7 +60,7 @@ void swap(int *p,int *q)
    *q=t;
 }
 
-void sort(int a[],int n) 
+static void sort(int a[],int n) 
 { 
    int i,j,temp;
 
@@ -72,7 +72,7 @@ void sort(int a[],int n)
    }
 }
 
-int median(int a[], int n)
+static int median(int a[], int n)
 {
     if (n==0) return 0;
     sort(a,n);
@@ -159,20 +159,26 @@ static int supports_mode(const struct at86rf215 *h,  at86rf215_chpm_t mode)
  * @param os clock output selection
  * @return 0 on success or negative error code
  */
-int at86rf215_init(struct at86rf215 *h)
+int at86rf215_init(struct at86rf215 *h, spi_t *spidev)
 {
 	if (!h) {
 		return -AT86RF215_INVAL_PARAM;
 	}
 
-	// TODO: Move out the SPI device init, can pass int spidev and store into at86rf215 structure
-	spi_init(&spidev, SPI_DEVICE, 0, 0, 2500000);
+	if (!spidev)
+	{
+		return -AT86RF215_INVAL_PARAM;
+	}
+	memcpy(&(h->spidev), spidev, sizeof(spidev));
 
 	/* Reset the state of the private struct members */
 	memset(&h->priv, 0, sizeof(struct at86rf215_priv));
 
+	at86rf215_reg_write_8(h, AT86RF215_CMD_RF_RESET, REG_RF_RST);
+	usleep(10000000);
+
 	uint8_t val = 0;
-	int ret = at86rf215_reg_read_8(&val, REG_RF_PN);
+	int ret = at86rf215_reg_read_8(h, &val, REG_RF_PN);
 	if (ret) {
 		return ret;
 	}
@@ -209,19 +215,19 @@ int at86rf215_init(struct at86rf215 *h)
 			val |= h->clko_os;
 			break;
 	}
-	ret = at86rf215_reg_write_8(val, REG_RF_CLKO);
+	ret = at86rf215_reg_write_8(h, val, REG_RF_CLKO);
 	if (ret) {
 		return ret;
 	}
 
 	/* Apply XO settings */
-	ret = at86rf215_reg_write_8((h->xo_fs << 4) | h->xo_trim, REG_RF_XOC);
+	ret = at86rf215_reg_write_8(h, (h->xo_fs << 4) | h->xo_trim, REG_RF_XOC);
 	if (ret) {
 		return ret;
 	}
 
 	/* Set the RF_CFG */
-	ret = at86rf215_reg_write_8((h->irqmm << 3) | (h->irqp << 2) | h->pad_drv, REG_RF_CFG);
+	ret = at86rf215_reg_write_8(h, (h->irqmm << 3) | (h->irqp << 2) | h->pad_drv, REG_RF_CFG);
 	if (ret) {
 		return ret;
 	}
@@ -238,7 +244,7 @@ int at86rf215_init(struct at86rf215 *h)
 		default:
 			return -AT86RF215_INVAL_PARAM;
 	}
-	ret = at86rf215_reg_write_8(val, REG_RF09_PADFE);
+	ret = at86rf215_reg_write_8(h, val, REG_RF09_PADFE);
 	if (ret) {
 		return ret;
 	}
@@ -254,13 +260,13 @@ int at86rf215_init(struct at86rf215 *h)
 		default:
 			return -AT86RF215_INVAL_PARAM;
 	}
-	ret = at86rf215_reg_write_8(val, REG_RF24_PADFE);
+	ret = at86rf215_reg_write_8(h, val, REG_RF24_PADFE);
 	if (ret) {
 		return ret;
 	}
 
 	/* Get the version of the IC */
-	ret = at86rf215_reg_read_8(&val, REG_RF_VN);
+	ret = at86rf215_reg_read_8(h, &val, REG_RF_VN);
 	if (ret) {
 		return ret;
 	}
@@ -327,13 +333,13 @@ int at86rf215_radio_conf(struct at86rf215 *h, at86rf215_radio_t radio,
 	if (radio == AT86RF215_RF09) {
 		switch (conf->cm) {
 			case AT86RF215_CM_IEEE: {
-				ret = at86rf215_reg_write_8(spacing, REG_RF09_CS);
+				ret = at86rf215_reg_write_8(h, spacing, REG_RF09_CS);
 				if (ret) {
 					return ret;
 				}
 				h->priv.radios[AT86RF215_RF09].cs_reg = spacing;
 				h->priv.radios[AT86RF215_RF09].base_freq = conf->base_freq;
-				ret = at86rf215_reg_write_8(spacing, REG_RF09_CS);
+				ret = at86rf215_reg_write_8(h, spacing, REG_RF09_CS);
 				if (ret) {
 					return ret;
 				}
@@ -343,11 +349,11 @@ int at86rf215_radio_conf(struct at86rf215 *h, at86rf215_radio_t radio,
 					return -AT86RF215_INVAL_PARAM;
 				}
 				uint16_t base = conf->base_freq / 25000;
-				ret = at86rf215_reg_write_8(base & 0xFF, REG_RF09_CCF0L);
+				ret = at86rf215_reg_write_8(h, base & 0xFF, REG_RF09_CCF0L);
 				if (ret) {
 					return ret;
 				}
-				ret = at86rf215_reg_write_8(base >> 8, REG_RF09_CCF0H);
+				ret = at86rf215_reg_write_8(h, base >> 8, REG_RF09_CCF0H);
 				if (ret) {
 					return ret;
 				}
@@ -361,7 +367,7 @@ int at86rf215_radio_conf(struct at86rf215 *h, at86rf215_radio_t radio,
 	} else {
 		switch (conf->cm) {
 			case AT86RF215_CM_IEEE: {
-				ret = at86rf215_reg_write_8(spacing, REG_RF24_CS);
+				ret = at86rf215_reg_write_8(h, spacing, REG_RF24_CS);
 				if (ret) {
 					return ret;
 				}
@@ -376,11 +382,11 @@ int at86rf215_radio_conf(struct at86rf215 *h, at86rf215_radio_t radio,
 				 * 1.5 GHz offset
 				 */
 				uint16_t base = (conf->base_freq - 1500000000) / 25000;
-				ret = at86rf215_reg_write_8(base & 0xFF, REG_RF24_CCF0L);
+				ret = at86rf215_reg_write_8(h, base & 0xFF, REG_RF24_CCF0L);
 				if (ret) {
 					return ret;
 				}
-				ret = at86rf215_reg_write_8(base >> 8, REG_RF24_CCF0H);
+				ret = at86rf215_reg_write_8(h, base >> 8, REG_RF24_CCF0H);
 				if (ret) {
 					return ret;
 				}
@@ -405,7 +411,7 @@ int at86rf215_radio_conf(struct at86rf215 *h, at86rf215_radio_t radio,
 			default:
 				return -AT86RF215_INVAL_PARAM;
 		}
-		ret = at86rf215_reg_write_8(conf->lbw, REG_RF09_PLL);
+		ret = at86rf215_reg_write_8(h, conf->lbw, REG_RF09_PLL);
 		if (ret) {
 			return ret;
 		}
@@ -422,11 +428,21 @@ int at86rf215_radio_conf(struct at86rf215 *h, at86rf215_radio_t radio,
  * @param len the length of the SPI transaction (max(MOSI, MISO))
  * @return 0 on success or negative error code
  */
-int at86rf215_spi_read(uint8_t *out, const uint8_t *in, size_t len)
+int at86rf215_spi_read(const struct at86rf215* h, uint8_t *out, const uint8_t *in, size_t len)
 {
 	int ret;
 
-	ret = spi_exchange(&spidev, out, in, len);
+	spi_t *spi = malloc(sizeof(spi_t));
+	if (spi != NULL)
+	{
+		memcpy(spi, &(h->spidev), sizeof(h->spidev));
+	}
+	else
+	{
+		return -AT86RF215_SPI_READ_FAILED;
+	}
+
+	ret = spi_exchange(spi, out, in, len);
 	if (ret >= 0)
 	{
 		ret = AT86RF215_OK;
@@ -435,6 +451,8 @@ int at86rf215_spi_read(uint8_t *out, const uint8_t *in, size_t len)
 	{
 		ret = -AT86RF215_SPI_READ_FAILED;
 	}
+
+	free(spi);
 	return ret;
 }
 
@@ -444,11 +462,21 @@ int at86rf215_spi_read(uint8_t *out, const uint8_t *in, size_t len)
  * @param len the size of the input buffer
  * @return 0 on success or negative error code
  */
-int at86rf215_spi_write(const uint8_t *in, size_t len)
+int at86rf215_spi_write(const struct at86rf215* h, const uint8_t *in, size_t len)
 {
 	int ret;
 
-	ret = spi_write(&spidev, in, len);
+	spi_t *spi = malloc(sizeof(spi_t));
+	if (spi != NULL)
+	{
+		memcpy(spi, &(h->spidev), sizeof(h->spidev));
+	}
+	else
+	{
+		return -AT86RF215_SPI_WRITE_FAILED;
+	}
+
+	ret = spi_write(spi, in, len);
 	if (ret >= 0)
 	{
 		ret = AT86RF215_OK;
@@ -457,7 +485,22 @@ int at86rf215_spi_write(const uint8_t *in, size_t len)
 	{
 		ret = -AT86RF215_SPI_WRITE_FAILED;
 	}
+
+	free(spi);
 	return ret;
+}
+
+int at86rf215_reg_read_request(const struct at86rf215* h, uint16_t reg)
+{
+	int ret = 0;
+
+	/* Construct properly the MOSI buffer */
+	uint8_t mosi[4] = {0x10, (reg >> 8) & 0x3F, reg & 0xFF, (uint8_t)h->chip_select};
+	ret = at86rf215_spi_write(h, mosi, 4);
+	if (ret) {
+		return ret;
+	}
+	return AT86RF215_OK;
 }
 
 /**
@@ -470,50 +513,36 @@ int at86rf215_spi_write(const uint8_t *in, size_t len)
  * @param reg the register to read
  * @return 0 on success or negative error code
  */
-int at86rf215_reg_read_8(uint8_t *out, uint16_t reg)
+int at86rf215_reg_read_8(const struct at86rf215 *h, uint8_t *out, uint16_t reg)
 {
 	if (!out) {
 		return -AT86RF215_INVAL_PARAM;
 	}
 	int ret = 0;
 
+	ret = at86rf215_reg_read_request(h, reg);
+	if (ret)
+	{
+		return ret;
+	}
+
+	// TEMP: Need to use interrupt
+	usleep(100000);
+
 	/* Construct properly the MOSI buffer */
-	uint8_t mosi[3] = {(reg >> 8) & 0x3F, reg & 0xFF, 0x0};
-	uint8_t miso[3] = {0x0, 0x0, 0x0};
-	ret = at86rf215_spi_read(miso, mosi, 3);
+	uint8_t mosi[5] = {0x10, (reg >> 8) & 0x3F | 0x40, reg & 0xFF, (uint8_t)h->chip_select, 0x0};
+	uint8_t miso[5] = {0x0, 0x0, 0x0, 0x0, 0x0};
+	ret = at86rf215_spi_read(h, miso, mosi, 5);
+	/*
+	uint8_t mosi[5] = {(reg >> 8) & 0x3F, reg & 0xFF, 0x0};
+	uint8_t miso[5] = {0x0, 0x0, 0x0};
+	ret = at86rf215_spi_read(h, miso, mosi, 5);
+	*/
 	if (ret) {
 		return ret;
 	}
-	*out = miso[2];
-	return AT86RF215_OK;
-}
-
-/**
- * Reads an 32-bit register
- * @note internally the function uses the at86rf215_spi_read() 
- * to accomplish the SPI transaction. Developers should
- * provide a proper implementation of those functions.
- * @note the result is stored in a MS byte first order
- *
- * @param out pointer to hold the read value
- * @param reg the register to read
- * @return 0 on success or negative error code
- */
-int at86rf215_reg_read_32(uint32_t *out, uint16_t reg)
-{
-	if (!out) {
-		return -AT86RF215_INVAL_PARAM;
-	}
-	int ret = 0;
-
-	/* Construct properly the MOSI buffer */
-	uint8_t mosi[6] = {(reg >> 8) & 0x3F, reg & 0xFF, 0x0, 0x0, 0x0, 0x0};
-	uint8_t miso[6] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
-	ret = at86rf215_spi_read(miso, mosi, 6);
-	if (ret) {
-		return ret;
-	}
-	*out = (miso[2] << 24) | (miso[3] << 16) | (miso[4] << 8) | miso[5];
+	*out = miso[4];
+	//*out = miso[2];
 	return AT86RF215_OK;
 }
 
@@ -528,38 +557,17 @@ int at86rf215_reg_read_32(uint32_t *out, uint16_t reg)
  * @param reg the register to write
  * @return 0 on success or negative error code
  */
-int at86rf215_reg_write_8(const uint8_t in, uint16_t reg)
+int at86rf215_reg_write_8(const struct at86rf215* h, const uint8_t in, uint16_t reg)
 {
 	int ret = 0;
 
 	/* Construct properly the MOSI buffer */
+	uint8_t mosi[5] = {0x10, (reg >> 8) | 0x80, reg & 0xFF, (uint8_t)h->chip_select, in};
+	ret = at86rf215_spi_write(h, mosi, 5);
+	/*
 	uint8_t mosi[3] = {(reg >> 8) | 0x80, reg & 0xFF, in};
-	ret = at86rf215_spi_write(mosi, 3);
-	if (ret) {
-		return ret;
-	}
-	return AT86RF215_OK;
-}
-
-/**
- * Writes an 16-bit register
- *
- * @note internally the function uses the at86rf215_spi_write() 
- * to accomplish the SPI transaction. Developers should
- * provide a proper implementation of those functions.
- * @note the value is written in a MS byte first order
- *
- * @param in the value to write
- * @param reg the register to write
- * @return 0 on success or negative error code
- */
-int at86rf215_reg_write_16(const uint16_t in, uint16_t reg)
-{
-	int ret = 0;
-
-	/* Construct properly the MOSI buffer */
-	uint8_t mosi[4] = {(reg >> 8) | 0x80, reg & 0xFF, in >> 8, in & 0xFF};
-	ret = at86rf215_spi_write(mosi, 4);
+	ret = at86rf215_spi_write(h, mosi, 3);
+	*/
 	if (ret) {
 		return ret;
 	}
@@ -594,7 +602,7 @@ int at86rf215_get_state(const struct at86rf215 *h, at86rf215_rf_state_t *state, 
 		default:
 			return -AT86RF215_INVAL_PARAM;
 	}
-	ret = at86rf215_reg_read_8(&val, reg);
+	ret = at86rf215_reg_read_8(h, &val, reg);
 	if (ret) {
 		return ret;
 	}
@@ -653,7 +661,7 @@ int at86rf215_set_cmd(struct at86rf215 *h, at86rf215_rf_cmd_t cmd, at86rf215_rad
 			return -AT86RF215_INVAL_PARAM;
 	}
 
-	ret = at86rf215_reg_write_8(cmd, reg);
+	ret = at86rf215_reg_write_8(h, cmd, reg);
 
 	/*Errata #6:    State Machine Command RFn_CMD=TRXOFF may not be succeeded
                     Description: If the current state is different from SLEEP, the execution of the command TRXOFF may fail.
@@ -668,7 +676,7 @@ int at86rf215_set_cmd(struct at86rf215 *h, at86rf215_rf_cmd_t cmd, at86rf215_rad
         while (radio_state != cmd && retries--)
         {
             io_utils_usleep(100);
-            at86rf215_reg_write_8(cmd, reg);
+            at86rf215_reg_write_8(h, cmd, reg);
         }
     }
     if (cmd == AT86RF215_CMD_RF_TXPREP)
@@ -703,12 +711,12 @@ int at86rf215_set_mode(struct at86rf215 *h, at86rf215_chpm_t mode)
 	}
 
 	uint8_t val = 0;
-	ret = at86rf215_reg_read_8(&val, REG_RF_IQIFC1);
+	ret = at86rf215_reg_read_8(h, &val, REG_RF_IQIFC1);
 	if (ret) {
 		return ret;
 	}
 	val = (val & 0x3) | (mode << 4);
-	ret = at86rf215_reg_write_8(val, REG_RF_IQIFC1);
+	ret = at86rf215_reg_write_8(h, val, REG_RF_IQIFC1);
 	if (ret) {
 		return ret;
 	}
@@ -744,7 +752,7 @@ int at86rf215_set_bbc_irq_mask(struct at86rf215 *h, at86rf215_radio_t radio, uin
 		default:
 			return -AT86RF215_NOT_SUPPORTED;
 	}
-	return at86rf215_reg_write_8(mask, reg);
+	return at86rf215_reg_write_8(h, mask, reg);
 }
 
 /**
@@ -767,7 +775,7 @@ int at86rf215_set_radio_irq_mask(struct at86rf215 *h, at86rf215_radio_t radio, u
 	} else {
 		reg = REG_RF24_IRQM;
 	}
-	return at86rf215_reg_write_8(mask, reg);
+	return at86rf215_reg_write_8(h, mask, reg);
 }
 
 static bool is_lpf_valid(at86rf215_lpfcut_t lpf)
@@ -825,7 +833,7 @@ int at86rf215_set_txcutc(struct at86rf215 *h, at86rf215_radio_t radio, at86rf215
 	} else {
 		reg = REG_RF24_TXCUTC;
 	}
-	return at86rf215_reg_write_8(paramp << 6 | lpf, reg);
+	return at86rf215_reg_write_8(h, paramp << 6 | lpf, reg);
 }
 
 /**
@@ -836,7 +844,7 @@ int at86rf215_set_txcutc(struct at86rf215 *h, at86rf215_radio_t radio, at86rf215
  * @param sr the sampling rate setting
  * @return 0 on success or negative error code
  */
-static int set_txdfe(at86rf215_radio_t radio, uint8_t rcut, uint8_t dm, at86rf215_sr_t sr)
+static int set_txdfe(const struct at86rf215*h ,at86rf215_radio_t radio, uint8_t rcut, uint8_t dm, at86rf215_sr_t sr)
 {
 	uint16_t reg = 0x0;
 	if (radio == AT86RF215_RF09) {
@@ -861,7 +869,7 @@ static int set_txdfe(at86rf215_radio_t radio, uint8_t rcut, uint8_t dm, at86rf21
 		return -AT86RF215_INVAL_PARAM;
 	}
 	const uint8_t val = (rcut << 5) | ((dm & 0x1) << 4) | sr;
-	return at86rf215_reg_write_8(val, reg);
+	return at86rf215_reg_write_8(h, val, reg);
 }
 
 /**
@@ -880,7 +888,7 @@ int at86rf215_set_txdfe(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rc
 		return ret;
 	}
 
-	return set_txdfe(radio, rcut, dm, sr);
+	return set_txdfe(h, radio, rcut, dm, sr);
 }
 
 
@@ -891,7 +899,7 @@ int at86rf215_set_txdfe(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rc
  * @param sr the sampling rate setting
  * @return 0 on success or negative error code
  */
-static int set_rxdfe(at86rf215_radio_t radio, uint8_t rcut, at86rf215_sr_t sr)
+static int set_rxdfe(const struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rcut, at86rf215_sr_t sr)
 {
 	uint16_t reg = 0x0;
 	if (radio == AT86RF215_RF09) {
@@ -916,7 +924,7 @@ static int set_rxdfe(at86rf215_radio_t radio, uint8_t rcut, at86rf215_sr_t sr)
 		return -AT86RF215_INVAL_PARAM;
 	}
 	const uint8_t val = (rcut << 5) | sr;
-	return at86rf215_reg_write_8(val, reg);
+	return at86rf215_reg_write_8(h, val, reg);
 }
 
 /**
@@ -934,7 +942,7 @@ int at86rf215_set_rxdfe(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rc
 		return ret;
 	}
 
-	return set_rxdfe(radio, rcut, sr);
+	return set_rxdfe(h, radio, rcut, sr);
 }
 
 /**
@@ -959,12 +967,12 @@ int at86rf215_set_rx_rcut(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t 
 		reg = REG_RF24_RXDFE;
 	}
 	uint8_t val = 0;
-	ret = at86rf215_reg_read_8(&val, reg);
+	ret = at86rf215_reg_read_8(h, &val, reg);
 	if (ret) {
 		return ret;
 	}
 	val &= 0x1F;
-	return at86rf215_reg_write_8(((rcut & 0x7) << 5) | val, reg);
+	return at86rf215_reg_write_8(h, ((rcut & 0x7) << 5) | val, reg);
 }
 
 /**
@@ -1001,7 +1009,7 @@ at86rf215_set_pac(struct at86rf215 *h, at86rf215_radio_t radio, at86rf215_pacur_
 	} else {
 		reg = REG_RF24_PAC;
 	}
-	return at86rf215_reg_write_8((pacur << 5) | power, reg);
+	return at86rf215_reg_write_8(h, (pacur << 5) | power, reg);
 }
 
 /**
@@ -1027,21 +1035,21 @@ int at86rf215_set_channel(struct at86rf215 *h, at86rf215_radio_t radio, uint16_t
 		return -AT86RF215_INVAL_CONF;
 	}
 	if (radio == AT86RF215_RF09) {
-		ret = at86rf215_reg_write_8(channel & 0xFF, REG_RF09_CNL);
+		ret = at86rf215_reg_write_8(h, channel & 0xFF, REG_RF09_CNL);
 		if (ret) {
 			return ret;
 		}
-		ret = at86rf215_reg_write_8((h->priv.radios[radio].cm << 6) |
+		ret = at86rf215_reg_write_8(h, (h->priv.radios[radio].cm << 6) |
 		                            ((channel >> 8) & 0x1), REG_RF09_CNM);
 		if (ret) {
 			return ret;
 		}
 	} else {
-		ret = at86rf215_reg_write_8(channel & 0xFF, REG_RF24_CNL);
+		ret = at86rf215_reg_write_8(h, channel & 0xFF, REG_RF24_CNL);
 		if (ret) {
 			return ret;
 		}
-		ret = at86rf215_reg_write_8((h->priv.radios[radio].cm << 6) |
+		ret = at86rf215_reg_write_8(h, (h->priv.radios[radio].cm << 6) |
 		                            ((channel >> 8) & 0x1), REG_RF24_CNM);
 		if (ret) {
 			return ret;
@@ -1083,19 +1091,19 @@ int at86rf215_set_freq(struct at86rf215 *h, at86rf215_radio_t radio, uint32_t fr
 			return -AT86RF215_INVAL_CONF;
 		}
 		/* Apply the frequency setting */
-		ret = at86rf215_reg_write_8((x >> 16) & 0xFF, REG_RF09_CCF0H);
+		ret = at86rf215_reg_write_8(h, (x >> 16) & 0xFF, REG_RF09_CCF0H);
 		if (ret) {
 			return ret;
 		}
-		ret = at86rf215_reg_write_8((x >> 8) & 0xFF, REG_RF09_CCF0L);
+		ret = at86rf215_reg_write_8(h, (x >> 8) & 0xFF, REG_RF09_CCF0L);
 		if (ret) {
 			return ret;
 		}
-		ret = at86rf215_reg_write_8(x & 0xFF, REG_RF09_CNL);
+		ret = at86rf215_reg_write_8(h, x & 0xFF, REG_RF09_CNL);
 		if (ret) {
 			return ret;
 		}
-		ret = at86rf215_reg_write_8(h->priv.radios[radio].cm << 6,
+		ret = at86rf215_reg_write_8(h, h->priv.radios[radio].cm << 6,
 		                            REG_RF09_CNM);
 		if (ret) {
 			return ret;
@@ -1111,19 +1119,19 @@ int at86rf215_set_freq(struct at86rf215 *h, at86rf215_radio_t radio, uint32_t fr
 			return -AT86RF215_INVAL_CONF;
 		}
 		/* Apply the frequency setting */
-		ret = at86rf215_reg_write_8((x >> 16) & 0xFF, REG_RF24_CCF0H);
+		ret = at86rf215_reg_write_8(h, (x >> 16) & 0xFF, REG_RF24_CCF0H);
 		if (ret) {
 			return ret;
 		}
-		ret = at86rf215_reg_write_8((x >> 8) & 0xFF, REG_RF24_CCF0L);
+		ret = at86rf215_reg_write_8(h, (x >> 8) & 0xFF, REG_RF24_CCF0L);
 		if (ret) {
 			return ret;
 		}
-		ret = at86rf215_reg_write_8(x & 0xFF, REG_RF24_CNL);
+		ret = at86rf215_reg_write_8(h, x & 0xFF, REG_RF24_CNL);
 		if (ret) {
 			return ret;
 		}
-		ret = at86rf215_reg_write_8(h->priv.radios[radio].cm << 6,
+		ret = at86rf215_reg_write_8(h, h->priv.radios[radio].cm << 6,
 		                            REG_RF24_CNM);
 		if (ret) {
 			return ret;
@@ -1152,7 +1160,7 @@ int at86rf215_get_pll_ls(const struct at86rf215 *h, at86rf215_pll_ls_t *status, 
 		reg = REG_RF24_PLL;
 	}
 	uint8_t val = 0;
-	ret = at86rf215_reg_read_8(&val, reg);
+	ret = at86rf215_reg_read_8(h, &val, reg);
 	if (ret) {
 		return ret;
 	}
@@ -1202,7 +1210,7 @@ int at86rf215_set_bw(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t if_in
 		reg = REG_RF24_RXBWC;
 	}
 	uint8_t val = ((if_inv & 0x1) << 5) | ((bw & 0x1) << 4) | bw;
-	return at86rf215_reg_write_8(val, reg);
+	return at86rf215_reg_write_8(h, val, reg);
 }
 
 int at86rf215_set_edd(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t df, at86rf215_edd_dtb_t dtb)
@@ -1219,7 +1227,7 @@ int at86rf215_set_edd(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t df, 
 		reg = REG_RF24_EDD;
 	}
 	uint8_t val = (df << 2) | dtb;
-	return at86rf215_reg_write_8(val, reg);
+	return at86rf215_reg_write_8(h, val, reg);
 }
 
 /**
@@ -1248,7 +1256,7 @@ int at86rf215_get_rssi(struct at86rf215 *h, at86rf215_radio_t radio, float *rssi
 		reg = REG_RF24_RSSI;
 	}
 	int8_t val = 0;
-	ret = at86rf215_reg_read_8(&val, reg);
+	ret = at86rf215_reg_read_8(h, &val, reg);
 	if (ret) {
 		return ret;
 	}
@@ -1277,7 +1285,7 @@ int at86rf215_get_edv(struct at86rf215 *h, at86rf215_radio_t radio, float *edv)
 		reg = REG_RF24_EDV;
 	}
 	int8_t val = 0;
-	ret = at86rf215_reg_read_8(&val, reg);
+	ret = at86rf215_reg_read_8(h, &val, reg);
 	if (ret) {
 		return ret;
 	}
@@ -1305,7 +1313,7 @@ int at86rf215_get_agc_gain(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t
 		reg = REG_RF24_AGCS;
 	}
 	uint8_t val = 0;
-	ret = at86rf215_reg_read_8(&val, reg);
+	ret = at86rf215_reg_read_8(h, &val, reg);
 	if (ret) {
 		return ret;
 	}
@@ -1426,7 +1434,7 @@ static int bb_conf_mrfsk(struct at86rf215 *h, at86rf215_radio_t radio, const str
 		default:
 			return -AT86RF215_INVAL_PARAM;
 	}
-	int ret = at86rf215_reg_write_8(val, REG_BBC0_FSKC0 + offset);
+	int ret = at86rf215_reg_write_8(h, val, REG_BBC0_FSKC0 + offset);
 	if (ret) {
 		return ret;
 	}
@@ -1434,7 +1442,7 @@ static int bb_conf_mrfsk(struct at86rf215 *h, at86rf215_radio_t radio, const str
 	/* FSKC1 */
 	val = conf->fsk.srate | (conf->fsk.fi << 5)
 	      | ((conf->fsk.preamble_length >> 2) & 0xC0);
-	ret = at86rf215_reg_write_8(val, REG_BBC0_FSKC1 + offset);
+	ret = at86rf215_reg_write_8(h, val, REG_BBC0_FSKC1 + offset);
 	if (ret) {
 		return ret;
 	}
@@ -1462,14 +1470,14 @@ static int bb_conf_mrfsk(struct at86rf215 *h, at86rf215_radio_t radio, const str
 			return -AT86RF215_INVAL_PARAM;
 	}
 	val |= conf->fsk.pdtm << 7;
-	ret = at86rf215_reg_write_8(val, REG_BBC0_FSKC2 + offset);
+	ret = at86rf215_reg_write_8(h, val, REG_BBC0_FSKC2 + offset);
 	if (ret) {
 		return ret;
 	}
 
 	/* FSKC3 */
 	val = (conf->fsk.sfd_threshold << 4) | conf->fsk.preamble_threshold;
-	ret = at86rf215_reg_write_8(val, REG_BBC0_FSKC3 + offset);
+	ret = at86rf215_reg_write_8(h, val, REG_BBC0_FSKC3 + offset);
 	if (ret) {
 		return ret;
 	}
@@ -1497,33 +1505,33 @@ static int bb_conf_mrfsk(struct at86rf215 *h, at86rf215_radio_t radio, const str
 	}
 	val |= (conf->fsk.rawrbit << 4) | (conf->fsk.sfd32 << 5)
 	       | (conf->fsk.sfdq << 6);
-	ret = at86rf215_reg_write_8(val, REG_BBC0_FSKC4 + offset);
+	ret = at86rf215_reg_write_8(h, val, REG_BBC0_FSKC4 + offset);
 	if (ret) {
 		return ret;
 	}
 
 	/* FSKPLL */
 	val = conf->fsk.preamble_length;
-	ret = at86rf215_reg_write_8(val, REG_BBC0_FSKPLL + offset);
+	ret = at86rf215_reg_write_8(h, val, REG_BBC0_FSKPLL + offset);
 	if (ret) {
 		return ret;
 	}
 
 	/* SFD configuration */
-	ret = at86rf215_reg_write_8(conf->fsk.sfd0, REG_BBC0_FSKSFD0L + offset);
+	ret = at86rf215_reg_write_8(h, conf->fsk.sfd0, REG_BBC0_FSKSFD0L + offset);
 	if (ret) {
 		return ret;
 	}
-	ret = at86rf215_reg_write_8(conf->fsk.sfd0 >> 8,
+	ret = at86rf215_reg_write_8(h, conf->fsk.sfd0 >> 8,
 	                            REG_BBC0_FSKSFD0H + offset);
 	if (ret) {
 		return ret;
 	}
-	ret = at86rf215_reg_write_8(conf->fsk.sfd1, REG_BBC0_FSKSFD1L + offset);
+	ret = at86rf215_reg_write_8(h, conf->fsk.sfd1, REG_BBC0_FSKSFD1L + offset);
 	if (ret) {
 		return ret;
 	}
-	ret = at86rf215_reg_write_8(conf->fsk.sfd1 >> 8,
+	ret = at86rf215_reg_write_8(h, conf->fsk.sfd1 >> 8,
 	                            REG_BBC0_FSKSFD1H + offset);
 	if (ret) {
 		return ret;
@@ -1532,13 +1540,13 @@ static int bb_conf_mrfsk(struct at86rf215 *h, at86rf215_radio_t radio, const str
 	/* FSKPHRTX */
 	val = conf->fsk.rb1 | (conf->fsk.rb2 << 1) | (conf->fsk.dw << 2)
 	      | (conf->fsk.sfd << 3);
-	ret = at86rf215_reg_write_8(val, REG_BBC0_FSKPLL + offset);
+	ret = at86rf215_reg_write_8(h, val, REG_BBC0_FSKPLL + offset);
 	if (ret) {
 		return ret;
 	}
 
 	/* FSKDM */
-	ret = at86rf215_reg_write_8(conf->fsk.dm | (conf->fsk.preemphasis << 1),
+	ret = at86rf215_reg_write_8(h, conf->fsk.dm | (conf->fsk.preemphasis << 1),
 	                            REG_BBC0_FSKDM + offset);
 	if (ret) {
 		return ret;
@@ -1546,42 +1554,42 @@ static int bb_conf_mrfsk(struct at86rf215 *h, at86rf215_radio_t radio, const str
 
 	/* Both TXDFE and FSK DM should have the direct modulation option enabled*/
 	txdfe |= conf->fsk.dm << 4;
-	ret = at86rf215_reg_read_8(&val, REG_RF09_TXDFE + offset);
+	ret = at86rf215_reg_read_8(h, &val, REG_RF09_TXDFE + offset);
 	if (ret) {
 		return ret;
 	}
 	txdfe |= (val & 0xE0);
-	ret = at86rf215_reg_write_8(txdfe, REG_RF09_TXDFE + offset);
+	ret = at86rf215_reg_write_8(h, txdfe, REG_RF09_TXDFE + offset);
 	if (ret) {
 		return ret;
 	}
 
 	/* PRemphasis filter setup */
-	ret = at86rf215_reg_write_8(conf->fsk.preemphasis_taps,
+	ret = at86rf215_reg_write_8(h, conf->fsk.preemphasis_taps,
 	                            REG_BBC0_FSKPE0 + offset);
 	if (ret) {
 		return ret;
 	}
 
-	ret = at86rf215_reg_write_8(conf->fsk.preemphasis_taps >> 8,
+	ret = at86rf215_reg_write_8(h, conf->fsk.preemphasis_taps >> 8,
 	                            REG_BBC0_FSKPE1 + offset);
 	if (ret) {
 		return ret;
 	}
 
-	ret = at86rf215_reg_write_8(conf->fsk.preemphasis_taps >> 16,
+	ret = at86rf215_reg_write_8(h, conf->fsk.preemphasis_taps >> 16,
 	                            REG_BBC0_FSKPE2 + offset);
 	if (ret) {
 		return ret;
 	}
 
 	/* Apply RX sampling rate */
-	ret = at86rf215_reg_read_8(&val, REG_RF09_RXDFE + offset);
+	ret = at86rf215_reg_read_8(h, &val, REG_RF09_RXDFE + offset);
 	if (ret) {
 		return ret;
 	}
 	rxdfe |= (val & 0xE0);
-	ret = at86rf215_reg_write_8(rxdfe, REG_RF09_RXDFE + offset);
+	ret = at86rf215_reg_write_8(h, rxdfe, REG_RF09_RXDFE + offset);
 	if (ret) {
 		return ret;
 	}
@@ -1625,7 +1633,7 @@ static int bb_conf_mrofdm(struct at86rf215 *h, at86rf215_radio_t radio, const st
 		default:
 			return -AT86RF215_INVAL_PARAM;
 	}
-	int ret = at86rf215_reg_write_8(val, REG_BBC0_OFDMPHRTX + offset);
+	int ret = at86rf215_reg_write_8(h, val, REG_BBC0_OFDMPHRTX + offset);
 	if (ret) {
 		return ret;
 	}
@@ -1666,14 +1674,14 @@ static int bb_conf_mrofdm(struct at86rf215 *h, at86rf215_radio_t radio, const st
 		default:
 			return -AT86RF215_INVAL_PARAM;
 	}
-	ret = at86rf215_reg_write_8(val, REG_BBC0_OFDMC + offset);
+	ret = at86rf215_reg_write_8(h, val, REG_BBC0_OFDMC + offset);
 	if (ret) {
 		return ret;
 	}
 
 	val = conf->ofdm.pdt << 5;
 	val |= conf->ofdm.rxo << 4;
-	ret = at86rf215_reg_write_8(val, REG_BBC0_OFDMSW + offset);
+	ret = at86rf215_reg_write_8(h, val, REG_BBC0_OFDMSW + offset);
 	if (ret) {
 		return ret;
 	}
@@ -1707,7 +1715,7 @@ int at86rf215_bb_conf(struct at86rf215 *h, at86rf215_radio_t radio, const struct
 	} else {
 		reg = REG_BBC1_PC;
 	}
-	ret = at86rf215_reg_write_8(val, reg);
+	ret = at86rf215_reg_write_8(h, val, reg);
 	if (ret) {
 		return ret;
 	}
@@ -1756,7 +1764,7 @@ int at86rf215_bb_enable(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t en
 	} else {
 		reg = REG_BBC1_PC;
 	}
-	ret = at86rf215_reg_write_8(val, reg);
+	ret = at86rf215_reg_write_8(h, val, reg);
 	if (ret) {
 		return ret;
 	}
@@ -1776,11 +1784,11 @@ static int write_tx_fifo(const struct at86rf215 *h, at86rf215_radio_t radio, con
 	int ret = 0;
 	if (radio == AT86RF215_RF09) {
 		/* Declare the size of the PSDU */
-		ret = at86rf215_reg_write_8(len & 0xFF, REG_BBC0_TXFLL);
+		ret = at86rf215_reg_write_8(h, len & 0xFF, REG_BBC0_TXFLL);
 		if (ret) {
 			return ret;
 		}
-		ret = at86rf215_reg_write_8((len >> 8) & 0xFF, REG_BBC0_TXFLH);
+		ret = at86rf215_reg_write_8(h, (len >> 8) & 0xFF, REG_BBC0_TXFLH);
 		if (ret) {
 			return ret;
 		}
@@ -1789,21 +1797,22 @@ static int write_tx_fifo(const struct at86rf215 *h, at86rf215_radio_t radio, con
 		uint8_t mosi[2] = {(REG_BBC0_FBTXS >> 8) | 0x80,
 		                   REG_BBC0_FBTXS & 0xFF
 		                  };
-		ret = at86rf215_spi_write(mosi, 2);
+		ret = at86rf215_spi_write(h, mosi, 2);
 		if (ret) {
 			return ret;
 		}
-		ret = at86rf215_spi_write(b, len);
+		ret = at86rf215_spi_write(h, b, len);
 		if (ret) {
 			return ret;
 		}
+
 	} else {
 		/* Declare the size of the PSDU */
-		ret = at86rf215_reg_write_8(len & 0xFF, REG_BBC1_TXFLL);
+		ret = at86rf215_reg_write_8(h, len & 0xFF, REG_BBC1_TXFLL);
 		if (ret) {
 			return ret;
 		}
-		ret = at86rf215_reg_write_8((len >> 8) & 0xFF, REG_BBC1_TXFLH);
+		ret = at86rf215_reg_write_8(h, (len >> 8) & 0xFF, REG_BBC1_TXFLH);
 		if (ret) {
 			return ret;
 		}
@@ -1812,11 +1821,11 @@ static int write_tx_fifo(const struct at86rf215 *h, at86rf215_radio_t radio, con
 		uint8_t mosi[2] = {(REG_BBC1_FBTXS >> 8) | 0x80,
 		                   REG_BBC1_FBTXS & 0xFF
 		                  };
-		ret = at86rf215_spi_write(mosi, 2);
+		ret = at86rf215_spi_write(h, mosi, 2);
 		if (ret) {
 			return ret;
 		}
-		ret = at86rf215_spi_write(b, len);
+		ret = at86rf215_spi_write(h, b, len);
 		if (ret) {
 			return ret;
 		}
@@ -1902,6 +1911,65 @@ int at86rf215_tx_frame(struct at86rf215 *h, at86rf215_radio_t radio, const uint8
 }
 
 /**
+ * Transmits a frame using the configured baseband core mode
+ * @note the chip mode should ensure that the corresponding baseband core
+ * is enabled
+ * @param h the device handle
+ * @param radio the RF fronted
+ * @param psdu the data to send
+ * @param len the number of bytes to send
+ * @return 0 on success or negative error code
+ */
+int at86rf215_tx_frame_auto_mode(struct at86rf215 *h, at86rf215_radio_t radio, const uint8_t *psdu, size_t len)
+{
+	int ret = supports_rf(h, radio);
+	if (ret) {
+		return ret;
+	}
+	if (!psdu) {
+		return -AT86RF215_INVAL_PARAM;
+	}
+
+	/*
+	 * In order to transmit the frame, the corresponding baseband core should
+	 * be enabled
+	 */
+	if (h->priv.chpm == AT86RF215_RF_MODE_RF) {
+		return -AT86RF215_INVAL_CHPM;
+	}
+	if (radio == AT86RF215_RF09) {
+		if (h->priv.chpm == AT86RF215_RF_MODE_BBRF09) {
+			return -AT86RF215_INVAL_CHPM;
+		}
+	} else {
+		if (h->priv.chpm == AT86RF215_RF_MODE_BBRF24) {
+			return -AT86RF215_INVAL_CHPM;
+		}
+	}
+
+	// TODO: May be can remove
+	printf("op_state = %d\n", h->priv.radios[radio].op_state);
+	while (h->priv.radios[radio].op_state != AT86RF215_OP_STATE_IDLE) {
+	}
+
+	h->priv.radios[radio].op_state = AT86RF215_OP_STATE_TX;
+	ret = write_tx_fifo(h, radio, psdu, len);
+	if (ret) {
+		return ret;
+	}
+
+	// TODO: Remove after verify
+	at86rf215_rf_state_t radio_state;
+	at86rf215_get_state(h, &radio_state, radio);
+	printf("radio state = %d\n", radio_state);
+
+
+	printf("Sending TX CMD.\n");
+	/* Data are on the FIFO. Issue the TX cmd to send them */
+	return AT86RF215_OK;
+}
+
+/**
  * Configures the IQ mode for a particular RF frontend.
  * @note Some settings are applied for the IQ mode of both sub-1 GHz and the
  * 2.4 GHz RF frontend.
@@ -1943,30 +2011,30 @@ int at86rf215_iq_conf(struct at86rf215 *h, at86rf215_radio_t radio, const struct
 	}
 	uint8_t val = conf->eec | (conf->cmv1v2 << 1) | (conf->cmv << 2)
 	              | (conf->drv << 4) | (conf->extlb << 7);
-	ret = at86rf215_reg_write_8(val, REG_RF_IQIFC0);
+	ret = at86rf215_reg_write_8(h, val, REG_RF_IQIFC0);
 	if (ret) {
 		return ret;
 	}
 	/* Set the RF_IQIFC1 but leave the CHPM unchanged  */
-	ret = at86rf215_reg_read_8(&val, REG_RF_IQIFC1);
+	ret = at86rf215_reg_read_8(h, &val, REG_RF_IQIFC1);
 	if (ret) {
 		return ret;
 	}
 	val &= BIT(4) | BIT(5) | BIT(6);
 	val |= conf->skedrv;
-	ret = at86rf215_reg_write_8(val, REG_RF_IQIFC1);
+	ret = at86rf215_reg_write_8(h, val, REG_RF_IQIFC1);
 	if (ret) {
 		return ret;
 	}
 
 	/* Apply the TX sampling rate settings */
-	ret = set_txdfe(radio, conf->trcut, 0, conf->tsr);
+	ret = set_txdfe(h, radio, conf->trcut, 0, conf->tsr);
 	if (ret) {
 		return ret;
 	}
 
 	/* Apply the RX sampling rate settings */
-	ret = set_rxdfe(radio, conf->rrcut, conf->rsr);
+	ret = set_rxdfe(h, radio, conf->rrcut, conf->rsr);
 	if (ret) {
 		return ret;
 	}
@@ -1987,7 +2055,7 @@ int at86rf215_get_irq_mask(const struct at86rf215 *h, uint8_t *mask, at86rf215_r
 		reg = REG_RF24_IRQM;
 	}
 	uint8_t val = 0;
-	ret = at86rf215_reg_read_8(&val, reg);
+	ret = at86rf215_reg_read_8(h, &val, reg);
 	if (ret) {
 		return ret;
 	}
@@ -2042,8 +2110,8 @@ void at86rf215_radio_set_tx_iq_calibration(const struct at86rf215 *h, at86rf215_
 	uint8_t val_i = cal_i & 0x3F;
 	uint8_t val_q = cal_q & 0x3F;
 
-	at86rf215_reg_write_8(val_i, reg_i);
-	at86rf215_reg_write_8(val_q, reg_q);
+	at86rf215_reg_write_8(h, val_i, reg_i);
+	at86rf215_reg_write_8(h, val_q, reg_q);
 
     // RFn_TXCI – Transmit calibration I path
     //  The register contains information about the TX LO leakage calibration value of the transmit I path. At the transition
@@ -2078,8 +2146,8 @@ void at86rf215_radio_get_tx_iq_calibration(const struct at86rf215 *h, at86rf215_
 	uint8_t val_i = 0;
 	uint8_t val_q = 0;
 
-	at86rf215_reg_read_8(&val_i, reg_i);
-	at86rf215_reg_read_8(&val_q, reg_q);
+	at86rf215_reg_read_8(h, &val_i, reg_i);
+	at86rf215_reg_read_8(h, &val_q, reg_q);
 
 	*cal_i = val_i & 0x3F;
     *cal_q = val_q & 0x3F;

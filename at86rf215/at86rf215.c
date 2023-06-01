@@ -40,6 +40,7 @@ int at86rf215_read_buffer(at86rf215_st* dev, uint16_t addr, uint8_t *buffer, uin
 
     // Need to implement polling method to check status
 
+    /*
     ret = i2c_read_from_buffer(dev->fd, I2C_TO_SPI_SLAVE_READ_ADDRESS, chunk_rx, size);
     if (ret >= 0)
     {
@@ -50,6 +51,7 @@ int at86rf215_read_buffer(at86rf215_st* dev, uint16_t addr, uint8_t *buffer, uin
         printf("Failed to read from buffer.\n");
         return -1;
     }
+    */
 
     return ret;
 }
@@ -84,12 +86,14 @@ int at86rf215_read_byte(at86rf215_st* dev, uint16_t addr)
 
     // Need to implement polling method to check status
 
+    /*
     ret = i2c_read_from_buffer(dev->fd, I2C_TO_SPI_SLAVE_READ_ADDRESS, chunk_rx, 1);
     if (ret < 0)
     {
         printf("Failed to read from buffer.\n");
         return -1;
     }
+    */
     
     return chunk_rx[0];
 }

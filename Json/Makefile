@@ -1,7 +1,7 @@
-DEPS = peripheral_gpio.h
-SRC_FILES = ../i2c/i2c.c peripheral_gpio_test.c peripheral_gpio.c
+DEPS = cJSON.h
+SRC_FILES = cJSON.c jsontest.c
 OBJ_FILES = $(SRC_FILES:.c=.o)
-EXECUTABLE = peripheral_gpio_test
+EXECUTABLE = json_test
 
 all: $(EXECUTABLE)
 

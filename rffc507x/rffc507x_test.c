@@ -3,8 +3,7 @@
 #include "../io_utils/io_utils.h"
 #include "../i2c/i2c.h"
 
-#define I2C_DEVICE "/dev/i2c-0"
-#define I2C_SLAVE_ADDRESS 0x20
+#define I2C_DEVICE "/dev/i2c-3"
 
 rffc507x_st dev =
 {
@@ -13,7 +12,7 @@ rffc507x_st dev =
 
 int main ()
 {
-    rffc507x_init(&dev, I2C_DEVICE, I2C_SLAVE_ADDRESS, rffc507x_1_ss);
+    rffc507x_init(&dev, I2C_DEVICE, I2C_SPI_RFFC_ADDRESS, rffc507x_1_ss);
 
     printf("RFFC507X Registers:\n");
 	for (int i = 0; i < RFFC507X_NUM_REGS; i ++)

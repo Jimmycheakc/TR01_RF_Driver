@@ -16,40 +16,28 @@ extern "C" {
 #include "stdio.h"
 #include "stdint.h"
 
-// Define the I2C-to-GPIO converter address
-#define I2C_GPIO_ADDRESS 0x40
+#define I2C_GPIO_ADDRESS         0x2E
 
-#define REG_LNA_EN          0x00
+#define LNA_EN_BIT_MASK          0x00
 
-#define REG_PA_EN           0x00
+#define PA_EN_BIT_MASK           0x01
 
-#define REG_CNTL1           0x00
-#define REG_CNTL2           0x00
-#define REG_CNTL3           0x00
-#define REG_CNTL4           0x00
-#define REG_CNTL5           0x00
-#define REG_CNTL6           0x00
+#define CNTL1_BIT_MASK           0x02
+#define CNTL2_BIT_MASK           0x03
+#define CNTL3_BIT_MASK           0x04
+#define CNTL4_BIT_MASK           0x05
+#define CNTL5_BIT_MASK           0x06
+#define CNTL6_BIT_MASK           0x07
 
-#define REG_MIXER1_RESET    0x00
-#define REG_MIXER1_EN       0x00
-#define REG_MIXER1_ENBL     0x00
-#define REG_MIXER1_MODE     0x00
+#define MIXER1_MODE_BIT_MASK     0x08
 
-#define REG_MIXER2_RESET    0x00
-#define REG_MIXER2_EN       0x00
-#define REG_MIXER2_ENBL     0x00
-#define REG_MIXER2_MODE     0x00
+#define MIXER2_MODE_BIT_MASK     0x09
 
-#define REG_ADC1_CS         0x00
-#define REG_ADC2_CS         0x00
+#define SWITCH_V1_1_BIT_MASK     0x0A
+#define SWITCH_V2_1_BIT_MASK     0x0B
 
-#define REG_RFIC1_SELN      0x00
-#define REG_RFIC2_SELN      0x00
-#define REG_RFIC3_SELN      0x00
-#define REG_RFIC4_SELN      0x00
-
-#define REG_SWITCH_V1_1     0x00
-#define REG_SWITCH_V2_1     0x00
+#define SWITCH_V1_2_BIT_MASK     0x0C
+#define SWITCH_V2_2_BIT_MASK     0x0D
 
 
 typedef struct {
@@ -78,37 +66,17 @@ int peri_gpio_cntl5(peri_gpio_t *self, uint8_t value);
 
 int peri_gpio_cntl6(peri_gpio_t *self, uint8_t value);
 
-int peri_gpio_mixer1_reset(peri_gpio_t *self, uint8_t value);
-
-int peri_gpio_mixer1_enable(peri_gpio_t *self, uint8_t value);
-
-int peri_gpio_mixer1_enable_bl(peri_gpio_t *self, uint8_t value);
-
 int peri_gpio_mixer1_mode(peri_gpio_t *self, uint8_t value);
 
-int peri_gpio_mixer2_reset(peri_gpio_t *self, uint8_t value);
-
-int peri_gpio_mixer2_enable(peri_gpio_t *self, uint8_t value);
-
-int peri_gpio_mixer2_enable_bl(peri_gpio_t *self, uint8_t value);
-
 int peri_gpio_mixer2_mode(peri_gpio_t *self, uint8_t value);
-
-int peri_gpio_adc1_cs(peri_gpio_t *self, uint8_t value);
-
-int peri_gpio_adc2_cs(peri_gpio_t *self, uint8_t value);
-
-int peri_gpio_rfic1_seln(peri_gpio_t *self, uint8_t value);
-
-int peri_gpio_rfic2_seln(peri_gpio_t *self, uint8_t value);
-
-int peri_gpio_rfic3_seln(peri_gpio_t *self, uint8_t value);
-
-int peri_gpio_rfic4_seln(peri_gpio_t *self, uint8_t value);
 
 int peri_gpio_switch_v1_1(peri_gpio_t *self, uint8_t value);
 
 int peri_gpio_switch_v2_1(peri_gpio_t *self, uint8_t value);
+
+int peri_gpio_switch_v1_2(peri_gpio_t *self, uint8_t value);
+
+int peri_gpio_switch_v2_2(peri_gpio_t *self, uint8_t value);
 
 
 #ifdef __cplusplus

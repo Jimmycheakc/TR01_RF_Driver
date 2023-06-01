@@ -29,9 +29,6 @@ typedef enum
     at86rf215_3_ss = 3,
     at86rf215_4_ss = 4,
 
-    rffc507x_1_ss = 5,
-    rffc507x_2_ss = 6,
-
     ads7041_1_ss = 7,
     ads7041_2_ss = 8,
 } spi_slave_select;
@@ -50,7 +47,7 @@ int i2c_write_multiple_bytes(int fd, uint8_t addr, uint8_t reg_addr, uint8_t *bu
 
 int i2c_write_to_buffer(int fd, uint8_t addr, uint8_t reg_addr, uint8_t *buf, uint8_t len);
 
-uint8_t i2c_read_from_buffer(int fd, uint8_t addr, uint8_t *buf, uint8_t len);
+uint8_t i2c_read_from_buffer(int fd, uint8_t addr, uint8_t reg_addr,  uint8_t *buf, uint8_t len);
 
 #ifdef __cplusplus
 }

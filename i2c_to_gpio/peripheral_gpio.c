@@ -6,6 +6,7 @@
 * @date 30/03/2023
 */
 
+#include "../i2c/i2c.h"
 #include "peripheral_gpio.h"
 
 /**
@@ -51,7 +52,11 @@ void peri_gpio_close(peri_gpio_t *self)
  */
 int peri_gpio_lna_enable(peri_gpio_t *self, uint8_t value)
 {
-    return i2c_write(self->fd, self->slave_addr, REG_LNA_EN, value);
+    uint16_t data = value << LNA_EN_BIT_MASK;
+    uint8_t msb = (data >> 8) & 0xFF;
+    uint8_t lsb = data & 0xFF;
+
+    return i2c_write(self->fd, self->slave_addr, msb, lsb);
 }
 
 /**
@@ -65,7 +70,11 @@ int peri_gpio_lna_enable(peri_gpio_t *self, uint8_t value)
  */
 int peri_gpio_pa_enable(peri_gpio_t *self, uint8_t value)
 {
-    return i2c_write(self->fd, self->slave_addr, REG_PA_EN, value);
+    uint16_t data = value << PA_EN_BIT_MASK;
+    uint8_t msb = (data >> 8) & 0xFF;
+    uint8_t lsb = data & 0xFF;
+
+    return i2c_write(self->fd, self->slave_addr, msb, lsb);
 }
 
 /**
@@ -79,7 +88,11 @@ int peri_gpio_pa_enable(peri_gpio_t *self, uint8_t value)
  */
 int peri_gpio_cntl1(peri_gpio_t *self, uint8_t value)
 {
-    return i2c_write(self->fd, self->slave_addr, REG_CNTL1, value);
+    uint16_t data = value << CNTL1_BIT_MASK;
+    uint8_t msb = (data >> 8) & 0xFF;
+    uint8_t lsb = data & 0xFF;
+
+    return i2c_write(self->fd, self->slave_addr, msb, lsb);
 }
 
 /**
@@ -93,7 +106,11 @@ int peri_gpio_cntl1(peri_gpio_t *self, uint8_t value)
  */
 int peri_gpio_cntl2(peri_gpio_t *self, uint8_t value)
 {
-    return i2c_write(self->fd, self->slave_addr, REG_CNTL2, value);
+    uint16_t data = value << CNTL2_BIT_MASK;
+    uint8_t msb = (data >> 8) & 0xFF;
+    uint8_t lsb = data & 0xFF;
+
+    return i2c_write(self->fd, self->slave_addr, msb, lsb);
 }
 
 /**
@@ -107,7 +124,11 @@ int peri_gpio_cntl2(peri_gpio_t *self, uint8_t value)
  */
 int peri_gpio_cntl3(peri_gpio_t *self, uint8_t value)
 {
-    return i2c_write(self->fd, self->slave_addr, REG_CNTL3, value);
+    uint16_t data = value << CNTL3_BIT_MASK;
+    uint8_t msb = (data >> 8) & 0xFF;
+    uint8_t lsb = data & 0xFF;
+
+    return i2c_write(self->fd, self->slave_addr, msb, lsb);
 }
 
 /**
@@ -121,7 +142,11 @@ int peri_gpio_cntl3(peri_gpio_t *self, uint8_t value)
  */
 int peri_gpio_cntl4(peri_gpio_t *self, uint8_t value)
 {
-    return i2c_write(self->fd, self->slave_addr, REG_CNTL4, value);
+    uint16_t data = value << CNTL4_BIT_MASK;
+    uint8_t msb = (data >> 8) & 0xFF;
+    uint8_t lsb = data & 0xFF;
+
+    return i2c_write(self->fd, self->slave_addr, msb, lsb);
 }
 
 /**
@@ -135,7 +160,11 @@ int peri_gpio_cntl4(peri_gpio_t *self, uint8_t value)
  */
 int peri_gpio_cntl5(peri_gpio_t *self, uint8_t value)
 {
-    return i2c_write(self->fd, self->slave_addr, REG_CNTL5, value);
+    uint16_t data = value << CNTL5_BIT_MASK;
+    uint8_t msb = (data >> 8) & 0xFF;
+    uint8_t lsb = data & 0xFF;
+
+    return i2c_write(self->fd, self->slave_addr, msb, lsb);
 }
 
 /**
@@ -149,49 +178,11 @@ int peri_gpio_cntl5(peri_gpio_t *self, uint8_t value)
  */
 int peri_gpio_cntl6(peri_gpio_t *self, uint8_t value)
 {
-    return i2c_write(self->fd, self->slave_addr, REG_CNTL6, value);
-}
+    uint16_t data = value << CNTL6_BIT_MASK;
+    uint8_t msb = (data >> 8) & 0xFF;
+    uint8_t lsb = data & 0xFF;
 
-/**
- *  A detailed description of the peri_gpio_mixer1_reset function
- *
- *  This function is to enable/disable gpio for mixer 1 reset.
- *
- *  @param \*self - pointer to the structure of peri_gpio_t
- *  @param value - 0(disable) or 1(enable)
- *  @return - integer value on success, else return -1 on error
- */
-int peri_gpio_mixer1_reset(peri_gpio_t *self, uint8_t value)
-{
-    return i2c_write(self->fd, self->slave_addr, REG_MIXER1_RESET, value);
-}
-
-/**
- *  A detailed description of the peri_gpio_mixer1_enable function
- *
- *  This function is to enable/disable gpio for mixer 1 enable.
- *
- *  @param \*self - pointer to the structure of peri_gpio_t
- *  @param value - 0(disable) or 1(enable)
- *  @return - integer value on success, else return -1 on error
- */
-int peri_gpio_mixer1_enable(peri_gpio_t *self, uint8_t value)
-{
-    return i2c_write(self->fd, self->slave_addr, REG_MIXER1_EN, value);
-}
-
-/**
- *  A detailed description of the peri_gpio_mixer1_enable_bl function
- *
- *  This function is to enable/disable gpio for mixer 1 enable bl.
- *
- *  @param \*self - pointer to the structure of peri_gpio_t
- *  @param value - 0(disable) or 1(enable)
- *  @return - integer value on success, else return -1 on error
- */
-int peri_gpio_mixer1_enable_bl(peri_gpio_t *self, uint8_t value)
-{
-    return i2c_write(self->fd, self->slave_addr, REG_MIXER1_ENBL, value);
+    return i2c_write(self->fd, self->slave_addr, msb, lsb);
 }
 
 /**
@@ -205,49 +196,11 @@ int peri_gpio_mixer1_enable_bl(peri_gpio_t *self, uint8_t value)
  */
 int peri_gpio_mixer1_mode(peri_gpio_t *self, uint8_t value)
 {
-    return i2c_write(self->fd, self->slave_addr, REG_MIXER1_MODE, value);
-}
+    uint16_t data = value << MIXER1_MODE_BIT_MASK;
+    uint8_t msb = (data >> 8) & 0xFF;
+    uint8_t lsb = data & 0xFF;
 
-/**
- *  A detailed description of the peri_gpio_mixer2_reset function
- *
- *  This function is to enable/disable gpio for mixer 2 reset.
- *
- *  @param \*self - pointer to the structure of peri_gpio_t
- *  @param value - 0(disable) or 1(enable)
- *  @return - integer value on success, else return -1 on error
- */
-int peri_gpio_mixer2_reset(peri_gpio_t *self, uint8_t value)
-{
-    return i2c_write(self->fd, self->slave_addr, REG_MIXER2_RESET, value);
-}
-
-/**
- *  A detailed description of the peri_gpio_mixer2_enable function
- *
- *  This function is to enable/disable gpio for mixer 2 enable.
- *
- *  @param \*self - pointer to the structure of peri_gpio_t
- *  @param value - 0(disable) or 1(enable)
- *  @return - integer value on success, else return -1 on error
- */
-int peri_gpio_mixer2_enable(peri_gpio_t *self, uint8_t value)
-{
-    return i2c_write(self->fd, self->slave_addr, REG_MIXER2_EN, value);
-}
-
-/**
- *  A detailed description of the peri_gpio_mixer2_enable_bl function
- *
- *  This function is to enable/disable gpio for mixer 2 enable bl.
- *
- *  @param \*self - pointer to the structure of peri_gpio_t
- *  @param value - 0(disable) or 1(enable)
- *  @return - integer value on success, else return -1 on error
- */
-int peri_gpio_mixer2_enable_bl(peri_gpio_t *self, uint8_t value)
-{
-    return i2c_write(self->fd, self->slave_addr, REG_MIXER2_ENBL, value);
+    return i2c_write(self->fd, self->slave_addr, msb, lsb);
 }
 
 /**
@@ -261,91 +214,11 @@ int peri_gpio_mixer2_enable_bl(peri_gpio_t *self, uint8_t value)
  */
 int peri_gpio_mixer2_mode(peri_gpio_t *self, uint8_t value)
 {
-    return i2c_write(self->fd, self->slave_addr, REG_MIXER2_MODE, value);
-}
+    uint16_t data = value << MIXER2_MODE_BIT_MASK;
+    uint8_t msb = (data >> 8) & 0xFF;
+    uint8_t lsb = data & 0xFF;
 
-/**
- *  A detailed description of the peri_gpio_adc1_cs function
- *
- *  This function is to enable/disable gpio for adc 1 chip select.
- *
- *  @param \*self - pointer to the structure of peri_gpio_t
- *  @param value - 0(disable) or 1(enable)
- *  @return - integer value on success, else return -1 on error
- */
-int peri_gpio_adc1_cs(peri_gpio_t *self, uint8_t value)
-{
-    return i2c_write(self->fd, self->slave_addr, REG_ADC1_CS, value);
-}
-
-/**
- *  A detailed description of the peri_gpio_adc2_cs function
- *
- *  This function is to enable/disable gpio for adc 2 chip select.
- *
- *  @param \*self - pointer to the structure of peri_gpio_t
- *  @param value - 0(disable) or 1(enable)
- *  @return - integer value on success, else return -1 on error
- */
-int peri_gpio_adc2_cs(peri_gpio_t *self, uint8_t value)
-{
-    return i2c_write(self->fd, self->slave_addr, REG_ADC2_CS, value);
-}
-
-/**
- *  A detailed description of the peri_gpio_rfic1_seln function
- *
- *  This function is to enable/disable gpio for rfic 1 select enable.
- *
- *  @param \*self - pointer to the structure of peri_gpio_t
- *  @param value - 0(disable) or 1(enable)
- *  @return - integer value on success, else return -1 on error
- */
-int peri_gpio_rfic1_seln(peri_gpio_t *self, uint8_t value)
-{
-    return i2c_write(self->fd, self->slave_addr, REG_RFIC1_SELN, value);
-}
-
-/**
- *  A detailed description of the peri_gpio_rfic2_seln function
- *
- *  This function is to enable/disable gpio for rfic 2 select enable.
- *
- *  @param \*self - pointer to the structure of peri_gpio_t
- *  @param value - 0(disable) or 1(enable)
- *  @return - integer value on success, else return -1 on error
- */
-int peri_gpio_rfic2_seln(peri_gpio_t *self, uint8_t value)
-{
-    return i2c_write(self->fd, self->slave_addr, REG_RFIC2_SELN, value);
-}
-
-/**
- *  A detailed description of the peri_gpio_rfic3_seln function
- *
- *  This function is to enable/disable gpio for rfic 3 select enable.
- *
- *  @param \*self - pointer to the structure of peri_gpio_t
- *  @param value - 0(disable) or 1(enable)
- *  @return - integer value on success, else return -1 on error
- */
-int peri_gpio_rfic3_seln(peri_gpio_t *self, uint8_t value)
-{
-    return i2c_write(self->fd, self->slave_addr, REG_RFIC3_SELN, value);
-}
-
-/**
- *  A detailed description of the peri_gpio_rfic4_seln function
- *
- *  This function is to enable/disable gpio for rfic 4 select enable.
- *
- *  @param \*self - pointer to the structure of peri_gpio_t
- *  @param value - 0(disable) or 1(enable)
- *  @return - integer value on success, else return -1 on error
- */
-int peri_gpio_rfic4_seln(peri_gpio_t *self, uint8_t value)
-{
-    return i2c_write(self->fd, self->slave_addr, REG_RFIC4_SELN, value);
+    return i2c_write(self->fd, self->slave_addr, msb, lsb);
 }
 
 /**
@@ -359,7 +232,11 @@ int peri_gpio_rfic4_seln(peri_gpio_t *self, uint8_t value)
  */
 int peri_gpio_switch_v1_1(peri_gpio_t *self, uint8_t value)
 {
-    return i2c_write(self->fd, self->slave_addr, REG_SWITCH_V1_1, value);
+    uint16_t data = value << SWITCH_V1_1_BIT_MASK;
+    uint8_t msb = (data >> 8) & 0xFF;
+    uint8_t lsb = data & 0xFF;
+
+    return i2c_write(self->fd, self->slave_addr, msb, lsb);
 }
 
 /**
@@ -373,5 +250,45 @@ int peri_gpio_switch_v1_1(peri_gpio_t *self, uint8_t value)
  */
 int peri_gpio_switch_v2_1(peri_gpio_t *self, uint8_t value)
 {
-    return i2c_write(self->fd, self->slave_addr, REG_SWITCH_V2_1, value);
+    uint16_t data = value << SWITCH_V2_1_BIT_MASK;
+    uint8_t msb = (data >> 8) & 0xFF;
+    uint8_t lsb = data & 0xFF;
+
+    return i2c_write(self->fd, self->slave_addr, msb, lsb);
+}
+
+/**
+ *  A detailed description of the peri_gpio_switch_v1_2 function
+ *
+ *  This function is to enable/disable gpio for switch v1_2 enable.
+ *
+ *  @param \*self - pointer to the structure of peri_gpio_t
+ *  @param value - 0(disable) or 1(enable)
+ *  @return - integer value on success, else return -1 on error
+ */
+int peri_gpio_switch_v1_2(peri_gpio_t *self, uint8_t value)
+{
+    uint16_t data = value << SWITCH_V1_2_BIT_MASK;
+    uint8_t msb = (data >> 8) & 0xFF;
+    uint8_t lsb = data & 0xFF;
+
+    return i2c_write(self->fd, self->slave_addr, msb, lsb);
+}
+
+/**
+ *  A detailed description of the peri_gpio_switch_v2_2 function
+ *
+ *  This function is to enable/disable gpio for switch v2_2 enable.
+ *
+ *  @param \*self - pointer to the structure of peri_gpio_t
+ *  @param value - 0(disable) or 1(enable)
+ *  @return - integer value on success, else return -1 on error
+ */
+int peri_gpio_switch_v2_2(peri_gpio_t *self, uint8_t value)
+{
+    uint16_t data = value << SWITCH_V2_2_BIT_MASK;
+    uint8_t msb = (data >> 8) & 0xFF;
+    uint8_t lsb = data & 0xFF;
+
+    return i2c_write(self->fd, self->slave_addr, msb, lsb);
 }

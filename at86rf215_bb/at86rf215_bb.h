@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "../io_utils/io_utils.h"
+#include "../spi/spi.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -421,6 +422,12 @@ typedef enum{
 	AT86RF215_OPT_4 = 3, //!< Option 4
 } at86rf215_ofdm_opt_t;
 
+typedef enum{
+	at86rf215_cs_1 = 0,
+	at86rf215_cs_2 = 1,
+	at86rf215_cs_both = 2,
+} at86rf215_chip_select_t;
+
 /**
  *
  */
@@ -569,6 +576,8 @@ struct at86rf215 {
     bool 							  override_cal;
 	pthread_t						  irq_tid;
 	gpio_interrupt_t*				  irq_data;
+	at86rf215_chip_select_t			  chip_select;
+	spi_t							  spidev;
 };
 
 int ready(const struct at86rf215 *h);
@@ -581,21 +590,17 @@ void event_node_wait_ready(at86rf215_event_st* ev);
 
 void event_node_signal_ready(at86rf215_event_st* ev, int ready);
 
-int at86rf215_init(struct at86rf215 *h);
+int at86rf215_init(struct at86rf215 *h, spi_t *spidev);
 
 int at86rf215_radio_conf(struct at86rf215 *h, at86rf215_radio_t radio, const struct at86rf215_radio_conf *conf);
 
-int at86rf215_spi_read(uint8_t *out, const uint8_t *in, size_t len);
+int at86rf215_spi_read(const struct at86rf215 *h, uint8_t *out, const uint8_t *in, size_t len);
 
-int at86rf215_spi_write(const uint8_t *in, size_t len);
+int at86rf215_spi_write(const struct at86rf215 *h, const uint8_t *in, size_t len);
 
-int at86rf215_reg_read_8(uint8_t *out, uint16_t reg);
+int at86rf215_reg_read_8(const struct at86rf215 *h, uint8_t *out, uint16_t reg);
 
-int at86rf215_reg_read_32(uint32_t *out, uint16_t reg);
-
-int at86rf215_reg_write_8(const uint8_t in, uint16_t reg);
-
-int at86rf215_reg_write_16(const uint16_t in, uint16_t reg);
+int at86rf215_reg_write_8(const struct at86rf215 *h, const uint8_t in, uint16_t reg);
 
 int at86rf215_get_state(const struct at86rf215 *h, at86rf215_rf_state_t *state, at86rf215_radio_t radio);
 
@@ -642,6 +647,8 @@ int at86rf215_bb_conf(struct at86rf215 *h, at86rf215_radio_t radio, const struct
 int at86rf215_bb_enable(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t en);
 
 int at86rf215_tx_frame(struct at86rf215 *h, at86rf215_radio_t radio, const uint8_t *psdu, size_t len);
+
+int at86rf215_tx_frame_auto_mode(struct at86rf215 *h, at86rf215_radio_t radio, const uint8_t *psdu, size_t len);
 
 int at86rf215_iq_conf(struct at86rf215 *h, at86rf215_radio_t radio, const struct at86rf215_iq_conf *conf);
 

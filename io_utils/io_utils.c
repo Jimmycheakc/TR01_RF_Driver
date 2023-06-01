@@ -183,6 +183,31 @@ int io_utils_setup_interrupt(const char *device, int event_type,
    return ret;
 }
 
+void *gpio_interrupt_bb_thread(void *data)
+{
+   int ret;
+   gpio_interrupt_t *gpio_interrupt = (gpio_interrupt_t*)data;
+
+   ret = gpiod_ctxless_event_monitor_ext(gpio_interrupt->device,
+                                       gpio_interrupt->event_type,
+                                       gpio_interrupt->pin,
+                                       gpio_interrupt->active_low,
+                                       gpio_interrupt->consumer,
+                                       NULL,
+                                       NULL,
+                                       gpio_interrupt->event_cb,
+                                       gpio_interrupt->data,
+                                       gpio_interrupt->flags);
+   if (ret < 0)
+   {
+      printf("Failed to register interrupt event callback function.\n");
+   }
+
+   free(gpio_interrupt);
+
+   return NULL;
+}
+
 int io_utils_setup_interrupt_bb(const char *device, int event_type,
                               unsigned int pin, bool active_low,
                               const char *consumer,
@@ -209,7 +234,68 @@ int io_utils_setup_interrupt_bb(const char *device, int event_type,
    dev->irq_data->data = data;
    dev->irq_data->flags = flags;
 
-   ret = pthread_create(&(dev->irq_tid), NULL, gpio_interrupt_thread, (void *)dev->irq_data);
+   ret = pthread_create(&(dev->irq_tid), NULL, gpio_interrupt_bb_thread, (void *)dev->irq_data);
+   if (ret < 0)
+   {
+      printf("Failed to create a thread.\n");
+      free(dev->irq_data);
+   }
+
+   return ret;
+}
+
+void *gpio_interrupt_bb_thread2(void *data)
+{
+   int ret;
+   gpio_interrupt_t *gpio_interrupt = (gpio_interrupt_t*)data;
+
+   ret = gpiod_ctxless_event_monitor_ext(gpio_interrupt->device,
+                                       gpio_interrupt->event_type,
+                                       gpio_interrupt->pin,
+                                       gpio_interrupt->active_low,
+                                       gpio_interrupt->consumer,
+                                       NULL,
+                                       NULL,
+                                       gpio_interrupt->event_cb,
+                                       gpio_interrupt->data,
+                                       gpio_interrupt->flags);
+   if (ret < 0)
+   {
+      printf("Failed to register interrupt event callback function.\n");
+   }
+
+   free(gpio_interrupt);
+
+   return NULL;
+}
+
+int io_utils_setup_interrupt_bb2(const char *device, int event_type,
+                              unsigned int pin, bool active_low,
+                              const char *consumer,
+                              gpiod_ctxless_event_handle_cb event_cb,
+                              void *data, int flags)
+{
+   int ret;
+   struct at86rf215* dev = (struct at86rf215*)data;
+   dev->irq_data = malloc(sizeof(gpio_interrupt_t));
+   if (dev->irq_data == NULL)
+   {
+      printf("Failed to allocate memory for irq data \n");
+      return -1;
+   }
+
+   strncpy(dev->irq_data->device, device, (sizeof(dev->irq_data->device) - 1));
+   dev->irq_data->device[sizeof(dev->irq_data->device) - 1] = '\0';
+   dev->irq_data->event_type = event_type;
+   dev->irq_data->pin = pin;
+   dev->irq_data->active_low = active_low;
+   strncpy(dev->irq_data->consumer, consumer, (sizeof(dev->irq_data->consumer) - 1));
+   dev->irq_data->consumer[sizeof(dev->irq_data->consumer) - 1] = '\0';
+   dev->irq_data->event_cb = event_cb;
+   dev->irq_data->data = data;
+   dev->irq_data->flags = flags;
+
+   ret = pthread_create(&(dev->irq_tid), NULL, gpio_interrupt_bb_thread2, (void *)dev->irq_data);
    if (ret < 0)
    {
       printf("Failed to create a thread.\n");

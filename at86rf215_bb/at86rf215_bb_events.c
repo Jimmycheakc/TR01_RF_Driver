@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "at86rf215_bb.h"
 #include "at86rf215_bb_regs.h"
+#include "at86rf215_bb_usb.h"
 #include <pthread.h>
 
 #define BIT(n) (1UL << (n))
@@ -125,6 +126,95 @@ static void handle_rf_irq(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t 
     }
 }
 
+static void handle_usb_bb_irq(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t bbcn_irqs)
+{
+	struct at86rf215_radio *r = &h->priv.radios[radio];
+
+	char channel_st[3];
+    if (radio == AT86RF215_RF09) strcpy(channel_st, "09");
+    else strcpy(channel_st, "24");
+
+    if (bbcn_irqs & BIT(0))
+    {
+        printf("INT @ BB%s: Frame reception started\n", channel_st);
+    }
+
+    if (bbcn_irqs & BIT(1))
+    {
+        printf("INT @ BB%s: Frame reception complete\n", channel_st);
+    }
+
+    if (bbcn_irqs & BIT(2))
+    {
+        printf("INT @ BB%s: Frame address matched\n", channel_st);
+    }
+
+    if (bbcn_irqs & BIT(3))
+    {
+        printf("INT @ BB%s: Frame extended address matched\n", channel_st);
+    }
+
+    if (bbcn_irqs & BIT(4))
+    {
+        printf("INT @ BB%s: Frame transmission complete\n", channel_st);
+    }
+
+    if (bbcn_irqs & BIT(5))
+    {
+        printf("INT @ BB%s: AGC hold\n", channel_st);
+    }
+
+    if (bbcn_irqs & BIT(6))
+    {
+        printf("INT @ BB%s: AGC released\n", channel_st);
+    }
+
+    if (bbcn_irqs & BIT(7))
+    {
+        printf("INT @ BB%s: Frame buffer level\n", channel_st);
+    }
+}
+
+static void handle_usb_rf_irq(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t rfn_irqs)
+{
+	struct at86rf215_radio *r = &h->priv.radios[radio];
+	
+    char channel_st[3];
+    if (radio == AT86RF215_RF09) strcpy(channel_st, "09");
+    else strcpy(channel_st, "24");
+
+    if (rfn_irqs & BIT(0))
+    {
+        printf("INT @ RADIO%s: Woke up\n", channel_st);
+    }
+
+    if (rfn_irqs & BIT(1))
+    {
+        printf("INT @ RADIO%s: Transceiver ready\n", channel_st);
+        event_node_signal_ready(&r->trxready, 1);
+    }
+
+    if (rfn_irqs & BIT(2))
+    {
+        printf("INT @ RADIO%s: Energy detection complete\n", channel_st);
+    }
+
+    if (rfn_irqs & BIT(3))
+    {
+        printf("INT @ RADIO%s: Battery low\n", channel_st);
+    }
+
+    if (rfn_irqs & BIT(4))
+    {
+        printf("INT @ RADIO%s: Transceiver error\n", channel_st);
+    }
+
+    if (rfn_irqs & BIT(5))
+    {
+        printf("INT @ RADIO%s: I/Q interface sync failed\n", channel_st);
+    }
+}
+
 /**
  * The IRQ handler of the AT86RF215. All IRQ sources are automatically
  * acknowledged
@@ -150,15 +240,47 @@ int at86rf215_irq_callback(int event, unsigned int line_offset, const struct tim
 	 * the manual says that it should
 	 */
 	uint8_t irqs[4] = {0x0, 0x0, 0x0, 0x0};
-	at86rf215_reg_read_8(&irqs[0], REG_RF09_IRQS);
-	at86rf215_reg_read_8(&irqs[1], REG_RF24_IRQS);
-	at86rf215_reg_read_8(&irqs[2], REG_BBC0_IRQS);
-	at86rf215_reg_read_8(&irqs[3], REG_BBC1_IRQS);
+	at86rf215_reg_read_8(h, &irqs[0], REG_RF09_IRQS);
+	at86rf215_reg_read_8(h, &irqs[1], REG_RF24_IRQS);
+	at86rf215_reg_read_8(h, &irqs[2], REG_BBC0_IRQS);
+	at86rf215_reg_read_8(h, &irqs[3], REG_BBC1_IRQS);
 
 	handle_rf_irq(h, AT86RF215_RF09, irqs[0]);
 	handle_rf_irq(h, AT86RF215_RF24, irqs[1]);
 	handle_bb_irq(h, AT86RF215_RF09, irqs[2]);
 	handle_bb_irq(h, AT86RF215_RF24, irqs[3]);
+
+
+	return at86rf215_irq_user_callback(h, irqs[0], irqs[1],
+	                                   irqs[2], irqs[3]);
+}
+
+int at86rf215_usb_irq_callback(int event, unsigned int line_offset, const struct timespec * time, void *data)
+{
+	printf("%s\n", __func__);
+	struct at86rf215 *h = (struct at86rf215*)data;
+
+    // TODO : Move it into at86rf215_bb.c as ready() static function
+	int ret = ready(h);
+	if (ret) {
+		return ret;
+	}
+
+	/*
+	 * Read and acknowledge all IRQ sources
+	 * NOTE: Block mode did not acknowledged the triggered IRQs, even if
+	 * the manual says that it should
+	 */
+	uint8_t irqs[4] = {0x0, 0x0, 0x0, 0x0};
+	at86rf215_usb_reg_read_8(&irqs[0], REG_RF09_IRQS);
+	at86rf215_usb_reg_read_8(&irqs[1], REG_RF24_IRQS);
+	at86rf215_usb_reg_read_8(&irqs[2], REG_BBC0_IRQS);
+	at86rf215_usb_reg_read_8(&irqs[3], REG_BBC1_IRQS);
+
+	handle_usb_rf_irq(h, AT86RF215_RF09, irqs[0]);
+	handle_usb_rf_irq(h, AT86RF215_RF24, irqs[1]);
+	handle_usb_bb_irq(h, AT86RF215_RF09, irqs[2]);
+	handle_usb_bb_irq(h, AT86RF215_RF24, irqs[3]);
 
 
 	return at86rf215_irq_user_callback(h, irqs[0], irqs[1],

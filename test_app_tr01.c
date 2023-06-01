@@ -988,6 +988,9 @@ void i2c_test(void)
 
     print_func_start_format(__func__);
 
+    // I2C write and read RFFC Mixer
+    // I2C to enable all GPIO
+
     print_func_end_format(__func__, ret);
 }
 
@@ -996,6 +999,8 @@ void spi_test(void)
     int ret = 0;
 
     print_func_start_format(__func__);
+
+    // SPI write and read RFIC
 
     print_func_end_format(__func__, ret);
 }

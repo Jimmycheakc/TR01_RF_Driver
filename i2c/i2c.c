@@ -258,7 +258,7 @@ int i2c_write_to_buffer(int fd, uint8_t addr, uint8_t reg_addr, uint8_t *buf, ui
  *  @param len - number of bytes to read
  *  @return - number of read bytes on success, else return -1 on error
  */
-uint8_t i2c_read_from_buffer(int fd, uint8_t addr, uint8_t *buf, uint8_t len)
+uint8_t i2c_read_from_buffer(int fd, uint8_t addr, uint8_t reg_addr, uint8_t *buf, uint8_t len)
 {
     struct i2c_msg msg[2];
     struct i2c_rdwr_ioctl_data data;
@@ -267,7 +267,7 @@ uint8_t i2c_read_from_buffer(int fd, uint8_t addr, uint8_t *buf, uint8_t len)
     msg[0].addr = (__u16)addr;
     msg[0].flags = 0;
     msg[0].len = 1;
-    msg[0].buf = NULL;
+    msg[0].buf = &reg_addr;
 
     msg[1].addr = (__u16)addr;
     msg[1].flags = I2C_M_RD;

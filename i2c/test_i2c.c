@@ -33,15 +33,6 @@ int main ()
     {
         printf("Unable to write the register\n");
     }
-
-    uint8_t chunk_rx[258] = {0};
-
-    ret = i2c_read_from_buffer(fd, I2C_TO_SPI_SLAVE_READ_ADDRESS, chunk_rx, 0);
-    if (ret < 0)
-    {
-        printf("Unable to read the register\n");
-    }
-
     i2c_close(fd);
 
     return 0;

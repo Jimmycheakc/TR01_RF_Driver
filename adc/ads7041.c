@@ -23,6 +23,8 @@ static uint16_t ads7041_read_register(ads7041_t *self, uint8_t reg_addr)
         return -1;
     }
 
+    // Temp: Need to update the i2c_read_from_buffer()
+    /*
     ret = i2c_read_from_buffer(self->fd, I2C_TO_SPI_SLAVE_READ_ADDRESS, data_buf, 2);
     if (ret < 0)
     {
@@ -32,6 +34,7 @@ static uint16_t ads7041_read_register(ads7041_t *self, uint8_t reg_addr)
 
     ret_buf |= ((uint16_t)data_buf[0] << 4);
     ret_buf |= data_buf[1] >> 4;
+    */
 
     return ret_buf;
 }

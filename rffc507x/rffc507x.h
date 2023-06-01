@@ -33,6 +33,7 @@ extern "C" {
 #include "../io_utils/io_utils.h"
 #include "../i2c/i2c.h"
 
+#define I2C_SPI_RFFC_ADDRESS         0x2A
 
 /* 31 registers, each containing 16 bits of data. */
 #define RFFC507X_NUM_REGS 31
@@ -57,11 +58,34 @@ typedef struct  // readsel = 0001
 } rffc507x_device_status_st;
 #pragma pack()
 
+typedef enum
+{
+    rffc507x_1_ss = 0,
+    rffc507x_2_ss = 1,
+
+    rffc507x_unknow = 0xFF,
+} rffc507x_ss_t;
+
+typedef enum
+{
+    rffc507x_1_ss_read_req = 0x00,
+    rffc507x_1_ss_read     = 0x01,
+    rffc507x_1_ss_write    = 0x02,
+    rffc507x_2_ss_read_req = 0x04,
+    rffc507x_2_ss_read     = 0x05,
+    rffc507x_2_ss_write    = 0x06,
+
+    rffc507x_ss_unknown    = 0xFF,
+} rffc507x_cmd_t;
+
 typedef struct
 {
     int fd;
     uint8_t slave_addr;
-    spi_slave_select slave_select;
+    rffc507x_ss_t slave_select;
+    rffc507x_cmd_t slave_select_read_req_cmd;
+    rffc507x_cmd_t slave_select_read_cmd;
+    rffc507x_cmd_t slave_select_write_cmd;
 
     double ref_freq_hz;
 
@@ -71,7 +95,7 @@ typedef struct
 } rffc507x_st;
 
 // Initialize chip
-int rffc507x_init(rffc507x_st* dev, const char *device_name, uint8_t addr, spi_slave_select slave_select);
+int rffc507x_init(rffc507x_st* dev, const char *device_name, uint8_t addr, rffc507x_ss_t slave_select);
 int rffc507x_release(rffc507x_st* dev);
 
 // Read a register via SPI. Save a copy to memory and return

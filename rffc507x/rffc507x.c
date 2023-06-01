@@ -91,7 +91,7 @@ int rffc507x_regs_commit(rffc507x_st* dev)
 
 //===========================================================================
 // Set up all registers according to defaults specified in docs.
-int rffc507x_init(rffc507x_st* dev, const char *device_name, uint8_t addr, spi_slave_select slave_select)
+int rffc507x_init(rffc507x_st* dev, const char *device_name, uint8_t addr, rffc507x_ss_t slave_select)
 {
 	printf("Initializing RFFC507x driver\n");
 	memcpy(dev->rffc507x_regs, rffc507x_regs_default, sizeof(dev->rffc507x_regs));
@@ -106,15 +106,22 @@ int rffc507x_init(rffc507x_st* dev, const char *device_name, uint8_t addr, spi_s
         return -1;
     }
 
-	if (slave_select < rffc507x_1_ss || slave_select > rffc507x_2_ss)
-    {
-        printf("Slave select must be within its range.\n");
-        return -1;
-    }
-
 	dev->fd = fd;
 	dev->slave_addr = addr;
 	dev->slave_select = slave_select;
+
+	if (slave_select == rffc507x_1_ss)
+    {
+		dev->slave_select_read_req_cmd = rffc507x_1_ss_read_req;
+		dev->slave_select_read_cmd = rffc507x_1_ss_read;
+		dev->slave_select_write_cmd = rffc507x_1_ss_write;
+    }
+	else if (slave_select == rffc507x_2_ss)
+	{
+		dev->slave_select_read_req_cmd = rffc507x_2_ss_read_req;
+		dev->slave_select_read_cmd = rffc507x_2_ss_read;
+		dev->slave_select_write_cmd = rffc507x_2_ss_write;
+	}
 
 	// set to known state
 	//rffc507x_reset(dev);
@@ -183,7 +190,10 @@ int rffc507x_release(rffc507x_st* dev)
 
 	i2c_close(dev->fd);
 	dev->slave_addr = 0;
-	dev->slave_select = unknow_ss;
+	dev->slave_select = rffc507x_unknow;
+	dev->slave_select_read_req_cmd = rffc507x_ss_unknown;
+	dev->slave_select_read_cmd = rffc507x_ss_unknown;
+	dev->slave_select_write_cmd = rffc507x_ss_unknown;
 
 	printf("Device release completed\n");
 
@@ -198,7 +208,7 @@ static int rffc507x_write(rffc507x_st* dev, uint8_t addr, uint16_t val)
     chunk_tx[1] = (val >> 8) & 0xFF;
     chunk_tx[2] = val & 0xFF;
 
-	return i2c_write_to_buffer(dev->fd, I2C_TO_SPI_SLAVE_WRITE_ADDRESS, dev->slave_select, chunk_tx, 3);
+	return i2c_write_to_buffer(dev->fd, I2C_SPI_RFFC_ADDRESS, dev->slave_select_write_cmd, chunk_tx, 3);
 }
 
 static uint16_t rffc507x_read(rffc507x_st* dev, uint8_t addr)
@@ -210,14 +220,16 @@ static uint16_t rffc507x_read(rffc507x_st* dev, uint8_t addr)
 
 	chunk_tx = (addr & 0x7F) | 0x80;
 
-	ret = i2c_write_to_buffer(dev->fd, I2C_TO_SPI_SLAVE_WRITE_ADDRESS, dev->slave_select, &chunk_tx, 1);
+	ret = i2c_write_to_buffer(dev->fd, I2C_SPI_RFFC_ADDRESS, dev->slave_select_read_req_cmd, &chunk_tx, 1);
 	if (ret < 0)
 	{
 		printf("Failed to write to buffer.\n");
 		return -1;
 	}
 
-	ret = i2c_read_from_buffer(dev->fd, I2C_TO_SPI_SLAVE_READ_ADDRESS, chunk_rx, 2);
+	usleep(100000);
+
+	ret = i2c_read_from_buffer(dev->fd, I2C_SPI_RFFC_ADDRESS, dev->slave_select_read_cmd, chunk_rx, 2);
     if (ret < 0)
     {
 		printf("Failed to read from buffer.\n");
